@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>BNZ YouWealth · High Growth</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap');
+
+  :root {
+    --bg: #0a0e17;
+    --surface: #111827;
+    --border: #1e2d40;
+    --accent: #00d4aa;
+    --accent2: #ff6b35;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --up: #00d4aa;
+    --down: #ff4757;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+    padding: 16px;
+  }
+
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .fund-name {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+
+  h1 {
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 1.1;
+  }
+
+  .last-updated {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    text-align: right;
+  }
+
+  #price-display {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .price-label { font-size: 11px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; }
+  .price-value { font-family: 'IBM Plex Mono', monospace; font-size: 28px; font-weight: 600; }
+  .price-change { font-family: 'IBM Plex Mono', monospace; font-size: 13px; margin-top: 2px; }
+  .pos { color: var(--up); }
+  .neg { color: var(--down); }
+
+  /* Range selector */
+  .range-btns {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+
+  .range-btn {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    padding: 5px 10px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .range-btn.active, .range-btn:active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--bg);
+  }
+
+  /* Chart */
+  .chart-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 16px;
+    position: relative;
+    height: 220px;
+  }
+
+  /* Summary table */
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+  }
+
+  tr { border-bottom: 1px solid var(--border); }
+  tr:last-child { border-bottom: none; }
+
+  td {
+    padding: 9px 0;
+    vertical-align: middle;
+  }
+
+  td:first-child { color: var(--muted); font-size: 12px; }
+  td:last-child { text-align: right; font-weight: 600; }
+
+  .divider-row td {
+    padding-top: 12px;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Loading / error */
+  #status {
+    text-align: center;
+    padding: 40px 0;
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 18px; height: 18px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-bottom: 10px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  #content { display: none; }
+
+  .refresh-btn {
+    display: block;
+    width: 100%;
+    margin-top: 16px;
+    padding: 12px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .refresh-btn:active { border-color: var(--accent); color: var(--accent); }
+</style>
+</head>
+<body>
+
+<div id="status">
+  <div class="spinner"></div><br>Fetching prices…
+</div>
+
+<div id="content">
+  <header>
+    <div>
+      <div class="fund-name">BNZ YouWealth</div>
+      <h1>High Growth<br>Fund</h1>
+    </div>
+    <div class="last-updated" id="last-updated"></div>
+  </header>
+
+  <div id="price-display">
+    <div>
+      <div class="price-label">Unit price (mid)</div>
+      <div class="price-value" id="latest-price">—</div>
+      <div class="price-change" id="price-change"></div>
+    </div>
+    <div style="text-align:right">
+      <div class="price-label">1-day</div>
+      <div class="price-change" id="day-change"></div>
+    </div>
+  </div>
+
+  <div class="range-btns">
+    <button class="range-btn" data-days="30">1M</button>
+    <button class="range-btn" data-days="91">3M</button>
+    <button class="range-btn" data-days="182">6M</button>
+    <button class="range-btn active" data-days="365">1Y</button>
+    <button class="range-btn" data-days="1095">3Y</button>
+    <button class="range-btn" data-days="0">All</button>
+  </div>
+
+  <div class="chart-wrap">
+    <canvas id="chart"></canvas>
+  </div>
+
+  <div class="section-label">Returns</div>
+  <table id="summary-table"></table>
+
+  <button class="refresh-btn" onclick="init()">↻ Refresh prices</button>
+</div>
+
+<script>
+const API_KEY   = "vjqaLG3y07VHpZnIe8nYX808FGPYid8G";
+const FUND_CODE = "BNZ2112009"; // High Growth
+const INCEPTION = new Date("2023-11-28");
+
+let allPrices = []; // [{date, mid, buy, sell}]
+let chart = null;
+let activeRange = 365;
+
+// ---- Date helpers ----
+function addDays(d, n) {
+  const r = new Date(d); r.setDate(r.getDate() + n); return r;
+}
+function fmtDate(d) {
+  return d.toISOString().slice(0, 10);
+}
+function isWeekend(d) {
+  const day = d.getDay(); return day === 0 || day === 6;
+}
+function weekdays(from, to) {
+  const dates = []; let d = new Date(from);
+  while (d <= to) { if (!isWeekend(d)) dates.push(new Date(d)); d = addDays(d, 1); }
+  return dates;
+}
+
+// ---- Fetch one date ----
+async function fetchDay(date) {
+  const url = `https://api.bnz.co.nz/v1/fundunitprices?date=${fmtDate(date)}&fundProduct=retailManagedFund`;
+  try {
+    const res = await fetch(url, { headers: { ApiKey: API_KEY } });
+    if (!res.ok) return null;
+    const json = await res.json();
+    const entry = (json.fundUnitPrices || []).find(f => f.fundCode === FUND_CODE);
+    if (!entry) return null;
+    const buy  = parseFloat(entry.buyPrice.amount);
+    const sell = parseFloat(entry.sellPrice.amount);
+    return { date: fmtDate(date), mid: (buy + sell) / 2, buy, sell };
+  } catch { return null; }
+}
+
+// ---- Load from localStorage cache + fetch missing ----
+async function loadPrices() {
+  const cacheKey = "bnz_hgf_prices";
+  let cached = [];
+  try { cached = JSON.parse(localStorage.getItem(cacheKey) || "[]"); } catch {}
+
+  const cachedDates = new Set(cached.map(r => r.date));
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  // Dates to fetch: inception to today, weekdays only, not already cached
+  const needed = weekdays(INCEPTION, today).filter(d => !cachedDates.has(fmtDate(d)));
+
+  if (needed.length > 0) {
+    document.getElementById("status").innerHTML =
+      `<div class="spinner"></div><br>Fetching ${needed.length} missing days…`;
+
+    // Fetch in small batches to avoid hammering
+    const BATCH = 10;
+    for (let i = 0; i < needed.length; i += BATCH) {
+      const batch = needed.slice(i, i + BATCH);
+      const results = await Promise.all(batch.map(fetchDay));
+      results.forEach(r => { if (r) cached.push(r); });
+      // Update status
+      const done = Math.min(i + BATCH, needed.length);
+      document.getElementById("status").innerHTML =
+        `<div class="spinner"></div><br>Fetched ${done} / ${needed.length}…`;
+    }
+
+    cached.sort((a, b) => a.date.localeCompare(b.date));
+    try { localStorage.setItem(cacheKey, JSON.stringify(cached)); } catch {}
+  }
+
+  return cached.filter(r => r.mid > 0);
+}
+
+// ---- Returns ----
+function cumReturn(p0, p1) {
+  if (!p0 || !p1) return null;
+  return (p1 / p0 - 1) * 100;
+}
+function annReturn(p0, p1, days) {
+  if (!p0 || !p1 || days <= 0) return null;
+  return (Math.pow(p1 / p0, 365.25 / days) - 1) * 100;
+}
+function priceAt(prices, targetDate) {
+  // First price on or after targetDate
+  const td = fmtDate(targetDate);
+  const r = prices.find(p => p.date >= td);
+  return r ? r.mid : null;
+}
+function fmt(v, decimals = 2) {
+  if (v === null || v === undefined || isNaN(v)) return "n/a";
+  const s = Math.abs(v).toFixed(decimals);
+  return (v >= 0 ? "+" : "−") + s + "%";
+}
+function cls(v) { return v === null ? "" : v >= 0 ? "pos" : "neg"; }
+
+// ---- Build summary table ----
+function buildTable(prices) {
+  const latest = prices[prices.length - 1];
+  const p1 = latest.mid;
+  const today = new Date(latest.date);
+
+  const rows = [
+    { label: "1 week",   val: cumReturn(priceAt(prices, addDays(today, -7)),   p1), pa: false },
+    { label: "1 month",  val: cumReturn(priceAt(prices, addDays(today, -30)),  p1), pa: false },
+    { label: "3 months", val: cumReturn(priceAt(prices, addDays(today, -91)),  p1), pa: false },
+    { label: "6 months", val: cumReturn(priceAt(prices, addDays(today, -182)), p1), pa: false },
+    { label: "1 year",   val: cumReturn(priceAt(prices, addDays(today, -365)), p1), pa: false },
+    null, // divider
+    { label: "3 years (p.a.)",     val: annReturn(priceAt(prices, addDays(today, -3*365.25)), p1, 3*365.25), pa: true },
+    { label: "5 years (p.a.)",     val: annReturn(priceAt(prices, addDays(today, -5*365.25)), p1, 5*365.25), pa: true },
+    { label: "Since inception (p.a.)", val: annReturn(prices[0].mid, p1, (today - new Date(prices[0].date)) / 86400000), pa: true },
+  ];
+
+  const tbody = rows.map(r => {
+    if (r === null) return `<tr class="divider-row"><td colspan="2">annualised</td></tr>`;
+    return `<tr><td>${r.label}</td><td class="${cls(r.val)}">${fmt(r.val)}</td></tr>`;
+  }).join("");
+
+  document.getElementById("summary-table").innerHTML = tbody;
+}
+
+// ---- Draw / update chart ----
+function buildChart(prices, days) {
+  const latest = prices[prices.length - 1];
+  const today = new Date(latest.date);
+  const from = days === 0 ? new Date(prices[0].date) : addDays(today, -days);
+  const slice = prices.filter(p => p.date >= fmtDate(from));
+
+  const labels = slice.map(p => p.date);
+  const data   = slice.map(p => p.mid);
+
+  // Colour: green if last >= first, red otherwise
+  const rising = data[data.length - 1] >= data[0];
+  const colour = rising ? "#00d4aa" : "#ff4757";
+
+  if (chart) {
+    chart.data.labels = labels;
+    chart.data.datasets[0].data = data;
+    chart.data.datasets[0].borderColor = colour;
+    chart.data.datasets[0].backgroundColor = colour + "18";
+    chart.update("none");
+  } else {
+    const ctx = document.getElementById("chart").getContext("2d");
+    chart = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels,
+        datasets: [{
+          data,
+          borderColor: colour,
+          backgroundColor: colour + "18",
+          borderWidth: 1.5,
+          pointRadius: 0,
+          fill: true,
+          tension: 0.2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        plugins: { legend: { display: false }, tooltip: {
+          mode: "index", intersect: false,
+          callbacks: {
+            label: ctx => " " + ctx.parsed.y.toFixed(4),
+            title: ctx => ctx[0].label
+          },
+          backgroundColor: "#1e2d40",
+          titleColor: "#64748b",
+          bodyColor: "#e2e8f0",
+          borderColor: "#1e2d40",
+          borderWidth: 1
+        }},
+        scales: {
+          x: {
+            ticks: {
+              color: "#64748b", font: { family: "IBM Plex Mono", size: 10 },
+              maxTicksLimit: 6,
+              maxRotation: 0
+            },
+            grid: { color: "#1e2d40" }
+          },
+          y: {
+            ticks: { color: "#64748b", font: { family: "IBM Plex Mono", size: 10 }, maxTicksLimit: 5 },
+            grid: { color: "#1e2d40" }
+          }
+        }
+      }
+    });
+  }
+}
+
+// ---- Price header ----
+function buildHeader(prices) {
+  const latest = prices[prices.length - 1];
+  const prev   = prices[prices.length - 2];
+
+  document.getElementById("latest-price").textContent = latest.mid.toFixed(4);
+  document.getElementById("last-updated").innerHTML =
+    `As at<br>${latest.date}`;
+
+  if (prev) {
+    const d = latest.mid - prev.mid;
+    const p = (d / prev.mid) * 100;
+    const sign = d >= 0 ? "+" : "−";
+    const c = d >= 0 ? "pos" : "neg";
+    document.getElementById("day-change").innerHTML =
+      `<span class="${c}">${sign}${Math.abs(d).toFixed(4)}</span>`;
+    document.getElementById("price-change").innerHTML =
+      `<span class="${c}">${sign}${Math.abs(p).toFixed(2)}%</span> vs prev`;
+  }
+}
+
+// ---- Range buttons ----
+document.querySelectorAll(".range-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".range-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    activeRange = parseInt(btn.dataset.days);
+    buildChart(allPrices, activeRange);
+  });
+});
+
+// ---- Init ----
+async function init() {
+  document.getElementById("content").style.display = "none";
+  document.getElementById("status").style.display  = "block";
+  document.getElementById("status").innerHTML =
+    `<div class="spinner"></div><br>Loading…`;
+
+  try {
+    allPrices = await loadPrices();
+    if (allPrices.length === 0) throw new Error("No data returned");
+
+    buildHeader(allPrices);
+    buildTable(allPrices);
+    buildChart(allPrices, activeRange);
+
+    document.getElementById("status").style.display  = "none";
+    document.getElementById("content").style.display = "block";
+  } catch (e) {
+    document.getElementById("status").innerHTML =
+      `⚠ Error: ${e.message}<br><br><button class="refresh-btn" onclick="init()" style="display:inline-block;width:auto;padding:8px 16px">Retry</button>`;
+  }
+}
+
+init();
+</script>
+</body>
+</html>
