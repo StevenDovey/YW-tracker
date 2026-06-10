@@ -190,8 +190,8 @@
     .ret-cell.pending { color: var(--muted); font-size: 10px; }
     .ret-cell.na { color: var(--muted); }
 
-    .chart-cell { height: 48px; position: relative; }
-    .chart-cell canvas { display: block; width: 100% !important; height: 48px !important; }
+    .chart-cell { height: 56px; position: relative; }
+    .chart-cell canvas { display: block; width: 100% !important; height: 44px !important; }
 
     @media (max-width: 1000px) {
       .col-header, .holding-row {
@@ -299,6 +299,38 @@
       padding: 0 12px 12px;
     }
     .modal-chart-wrap canvas { display: block; width: 100% !important; height: 188px !important; }
+
+    .range-bar {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .list-range-btn {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 5px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.15s;
+      letter-spacing: 0.05em;
+    }
+    .list-range-btn.active { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+    .list-range-btn:hover:not(.active) { color: var(--text); border-color: var(--muted); }
+    .date-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px;
+      color: var(--muted);
+      text-align: right;
+      padding-top: 2px;
+      letter-spacing: 0.02em;
+    }
+    .chart-cell { height: 56px; }
+    .chart-cell canvas { display: block; width: 100% !important; height: 46px !important; }
   </style>
 </head>
 <body>
@@ -320,6 +352,13 @@
     <div class="progress-fill" id="progress-fill"></div>
   </div>
 
+  <div class="range-bar">
+    <button class="list-range-btn" data-weeks="4">1M</button>
+    <button class="list-range-btn" data-weeks="13">3M</button>
+    <button class="list-range-btn" data-weeks="26">6M</button>
+    <button class="list-range-btn active" data-weeks="52">1Y</button>
+    <button class="list-range-btn" data-weeks="104">2Y</button>
+  </div>
   <div class="table-wrap">
     <div class="col-header">
       <span>#</span>
@@ -502,7 +541,7 @@ function buildRows() {
       `<div class="weight-pct">${h.weight.toFixed(2)}%</div>` +
       `<div class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:${barW}%"></div></div></div>` +
       `<div class="ret-cell pending" id="ret${i}">…</div>` +
-      `<div class="chart-cell" id="cc${i}"><canvas id="cv${i}" height="48"></canvas></div>`;
+      `<div class="chart-cell" id="cc${i}"><canvas id="cv${i}" height="44"></canvas><div class="date-label" id="dt${i}"></div></div>`;
     frag.appendChild(row);
   });
   document.getElementById('holdings-list').appendChild(frag);
@@ -514,7 +553,32 @@ const YAHOO_BASE = 'https://query1.finance.yahoo.com/v8/finance/chart/';
 const PROXY = 'https://corsproxy.io/?';
 const chartInstances = {};
 
-const priceCache = {};  // index -> pts array
+const priceCache = {};  // index -> { pts, lastDate }
+let activeListWeeks = 52;
+
+document.querySelectorAll('.list-range-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.list-range-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeListWeeks = parseInt(btn.dataset.weeks);
+    redrawAll();
+  });
+});
+
+function redrawAll() {
+  for (let i = 0; i < N; i++) {
+    const cache = priceCache[i];
+    if (!cache) continue;
+    const sliced = cache.pts.slice(-activeListWeeks);
+    if (sliced.length < 2) continue;
+    const ret = (sliced[sliced.length-1] - sliced[0]) / sliced[0] * 100;
+    const isUp = ret >= 0;
+    const retEl = document.getElementById('ret' + i);
+    retEl.textContent = (isUp ? '+' : '') + ret.toFixed(1) + '%';
+    retEl.className = 'ret-cell ' + (isUp ? 'up' : 'down');
+    drawSparkline(i, sliced, isUp);
+  }
+}
 let modalChart = null;
 let modalActiveWeeks = 52;
 
@@ -525,7 +589,7 @@ document.querySelectorAll('.modal-range-btn').forEach(btn => {
     btn.classList.add('active');
     modalActiveWeeks = parseInt(btn.dataset.weeks);
     const idx = parseInt(document.getElementById('modal-overlay').dataset.idx);
-    if (priceCache[idx]) drawModalChart(priceCache[idx]);
+    if (priceCache[idx]) drawModalChart(priceCache[idx].pts);
   });
 });
 
@@ -546,7 +610,7 @@ function openDetail(i) {
   modalActiveWeeks = 52;
   document.querySelectorAll('.modal-range-btn').forEach(b => b.classList.toggle('active', b.dataset.weeks === '52'));
   if (priceCache[i]) {
-    drawModalChart(priceCache[i]);
+    drawModalChart(priceCache[i].pts);
   } else {
     if (modalChart) { modalChart.destroy(); modalChart = null; }
   }
@@ -602,7 +666,7 @@ function drawModalChart(pts) {
 
 
 async function fetchTicker(ticker) {
-  const yf = `${YAHOO_BASE}${encodeURIComponent(ticker)}?range=1y&interval=1wk`;
+  const yf = `${YAHOO_BASE}${encodeURIComponent(ticker)}?range=2y&interval=1wk`;
   const url = PROXY + encodeURIComponent(yf);
   try {
     const r = await fetch(url);
@@ -612,11 +676,15 @@ async function fetchTicker(ticker) {
     if (!res) return null;
     const closes = res.indicators?.quote?.[0]?.close ?? [];
     const ts = res.timestamp ?? [];
-    const pts = [];
+    const pts = [], dates = [];
     for (let k = 0; k < ts.length; k++) {
-      if (closes[k] != null) pts.push(closes[k]);
+      if (closes[k] != null) {
+        pts.push(closes[k]);
+        dates.push(new Date(ts[k] * 1000).toISOString().slice(0,10));
+      }
     }
-    return pts.length >= 2 ? pts : null;
+    if (pts.length < 2) return null;
+    return { pts, lastDate: dates[dates.length - 1] };
   } catch {
     return null;
   }
@@ -653,23 +721,26 @@ function drawSparkline(id, pts, isUp) {
 }
 
 async function loadHolding(i) {
-  const pts = await fetchTicker(HOLDINGS[i].ticker);
-  if (pts) priceCache[i] = pts;
+  const result = await fetchTicker(HOLDINGS[i].ticker);
   loadedCount++;
   document.getElementById('loaded-count').textContent = loadedCount;
   document.getElementById('progress-fill').style.width = (loadedCount / N * 100) + '%';
 
   const retEl = document.getElementById('ret' + i);
-  if (!pts) {
+  if (!result) {
     retEl.textContent = 'n/a';
     retEl.className = 'ret-cell na';
     return;
   }
-  const ret = (pts[pts.length - 1] - pts[0]) / pts[0] * 100;
+  priceCache[i] = result;
+  const sliced = result.pts.slice(-activeListWeeks);
+  const ret = (sliced[sliced.length-1] - sliced[0]) / sliced[0] * 100;
   const isUp = ret >= 0;
   retEl.textContent = (isUp ? '+' : '') + ret.toFixed(1) + '%';
   retEl.className = 'ret-cell ' + (isUp ? 'up' : 'down');
-  drawSparkline(i, pts, isUp);
+  drawSparkline(i, sliced, isUp);
+  const dtEl = document.getElementById('dt' + i);
+  if (dtEl) dtEl.textContent = result.lastDate;
 }
 
 async function loadAll() {
