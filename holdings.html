@@ -510,7 +510,8 @@ function buildRows() {
 
 buildRows();
 
-const YAHOO = 'https://query1.finance.yahoo.com/v8/finance/chart/';
+const YAHOO_BASE = 'https://query1.finance.yahoo.com/v8/finance/chart/';
+const PROXY = 'https://corsproxy.io/?';
 const chartInstances = {};
 
 const priceCache = {};  // index -> pts array
@@ -601,7 +602,8 @@ function drawModalChart(pts) {
 
 
 async function fetchTicker(ticker) {
-  const url = `${YAHOO}${encodeURIComponent(ticker)}?range=1y&interval=1wk&events=div&corsDomain=finance.yahoo.com`;
+  const yf = `${YAHOO_BASE}${encodeURIComponent(ticker)}?range=1y&interval=1wk`;
+  const url = PROXY + encodeURIComponent(yf);
   try {
     const r = await fetch(url);
     if (!r.ok) return null;
