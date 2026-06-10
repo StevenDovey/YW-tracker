@@ -78,35 +78,18 @@
       padding: 24px;
     }
 
-    .summary-row {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 20px;
-      flex-wrap: wrap;
-    }
-    .stat-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 14px 18px;
+    .meta-bar {
       font-family: 'IBM Plex Mono', monospace;
-      min-width: 140px;
-    }
-    .stat-card .label {
-      font-size: 9px;
+      font-size: 11px;
       color: var(--muted);
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      margin-bottom: 6px;
+      margin-bottom: 14px;
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      align-items: center;
     }
-    .stat-card .value {
-      font-size: 20px;
-      font-weight: 600;
-      color: var(--text);
-      line-height: 1;
-    }
-    .stat-card .value.accent { color: var(--accent); }
-    .stat-card .value.small { font-size: 13px; margin-top: 2px; }
+    .meta-bar .hi { color: var(--accent); font-weight: 600; }
+    .meta-bar .sep { color: var(--border); }
 
     .progress-wrap {
       height: 2px;
@@ -257,31 +240,18 @@
 
 <div class="container">
 
-  <div class="summary-row">
-    <div class="stat-card">
-      <div class="label">Holdings shown</div>
-      <div class="value" id="stat-count">—</div>
-    </div>
-    <div class="stat-card">
-      <div class="label">Coverage</div>
-      <div class="value accent" id="stat-coverage">—</div>
-    </div>
-    <div class="stat-card">
-      <div class="label">Annual fund charge</div>
-      <div class="value accent">0.45%</div>
-    </div>
-    <div class="stat-card">
-      <div class="label">Risk / timeframe</div>
-      <div class="value small">7 / 7 &nbsp;·&nbsp; 12yr min</div>
-    </div>
-    <div class="stat-card">
-      <div class="label">Target allocation</div>
-      <div class="value small">100% growth assets</div>
-    </div>
-    <div class="stat-card">
-      <div class="label">Holdings date</div>
-      <div class="value small">30 Sep 2025</div>
-    </div>
+  <div class="meta-bar">
+    <span><span class="hi" id="stat-count">—</span> holdings</span>
+    <span class="sep">·</span>
+    <span><span class="hi" id="stat-coverage">—</span> of fund NAV</span>
+    <span class="sep">·</span>
+    <span>0.45% annual charge</span>
+    <span class="sep">·</span>
+    <span>Risk 7/7</span>
+    <span class="sep">·</span>
+    <span>100% growth assets</span>
+    <span class="sep">·</span>
+    <span>Data: 30 Sep 2025</span>
   </div>
 
   <div class="progress-wrap">

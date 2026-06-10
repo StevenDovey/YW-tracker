@@ -3,87 +3,101 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>BNZ YouWealth</title>
+<title>YouWealth</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap');
-  :root {
-    --bg: #0a0e17; --surface: #111827; --border: #1e2d40;
-    --accent: #00d4aa; --text: #e2e8f0; --muted: #64748b;
-    --up: #00d4aa; --down: #ff4757;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; }
+  :root { --bg:#0a0e17; --surface:#111827; --border:#1e2d40; --accent:#00d4aa; --text:#e2e8f0; --muted:#64748b; --up:#00d4aa; --down:#ff4757; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:14px;min-height:100vh}
 
-  /* Fund tab bar */
-  .fund-tabs { display: flex; overflow-x: auto; border-bottom: 1px solid var(--border); background: var(--surface); -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-  .fund-tabs::-webkit-scrollbar { display: none; }
-  .fund-tab { flex: 0 0 auto; padding: 12px 16px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; transition: all 0.15s; font-family: 'IBM Plex Mono', monospace; }
-  .fund-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  /* Nav */
+  nav{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid var(--border);background:var(--bg);position:sticky;top:0;z-index:20}
+  .nav-title{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;letter-spacing:0.06em;color:var(--text)}
+  .nav-right{display:flex;align-items:center;gap:16px}
+  .nav-link{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);text-decoration:none;letter-spacing:0.05em;transition:color 0.15s}
+  .nav-link:hover{color:var(--accent)}
+  .nav-updated{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted)}
 
-  .page { padding: 16px; }
+  /* Status */
+  #status{text-align:center;padding:60px 16px;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:12px}
+  .spinner{display:inline-block;width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;margin-bottom:10px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  #content{display:none}
 
-  header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
-  .fund-label { font-size: 11px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent); margin-bottom: 4px; }
-  h1 { font-size: 20px; font-weight: 600; line-height: 1.2; }
-  .last-updated { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--muted); text-align: right; }
+  /* Overview grid */
+  .overview{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;padding:20px}
+  .fund-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;cursor:pointer;transition:border-color 0.15s,transform 0.1s;position:relative;overflow:hidden}
+  .fund-card:hover{border-color:var(--accent);transform:translateY(-1px)}
+  .fund-card:active{transform:translateY(0)}
+  .card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+  .card-name{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent)}
+  .card-arrow{font-size:14px;color:var(--muted)}
+  .card-price{font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;color:var(--text);margin-bottom:4px}
+  .card-change{font-family:'IBM Plex Mono',monospace;font-size:12px;margin-bottom:2px}
+  .card-return{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:12px}
+  .card-sparkline{height:64px;position:relative}
+  .card-sparkline canvas{display:block;width:100%!important;height:64px!important}
+  .pos{color:var(--up)}.neg{color:var(--down)}
 
-  #price-display { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
-  .price-label { font-size: 11px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; }
-  .price-value { font-family: 'IBM Plex Mono', monospace; font-size: 28px; font-weight: 600; }
-  .price-change { font-family: 'IBM Plex Mono', monospace; font-size: 13px; margin-top: 2px; }
-  .pos { color: var(--up); } .neg { color: var(--down); }
-
-  .range-btns { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
-  .range-btn { font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; padding: 5px 10px; border-radius: 5px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; transition: all 0.15s; }
-  .range-btn.active { background: var(--accent); border-color: var(--accent); color: var(--bg); }
-
-  .chart-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-bottom: 16px; height: 220px; }
-
-  .section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
-  table { width: 100%; border-collapse: collapse; font-family: 'IBM Plex Mono', monospace; font-size: 13px; }
-  tr { border-bottom: 1px solid var(--border); }
-  tr:last-child { border-bottom: none; }
-  td { padding: 9px 0; vertical-align: middle; }
-  td:first-child { color: var(--muted); font-size: 12px; }
-  td:last-child { text-align: right; font-weight: 600; }
-  .divider-row td { padding-top: 12px; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--border); border-bottom: 1px solid var(--border); }
-
-  .refresh-btn { display: block; width: 100%; margin-top: 16px; padding: 12px; background: transparent; border: 1px solid var(--border); border-radius: 8px; color: var(--muted); font-family: 'IBM Plex Mono', monospace; font-size: 12px; cursor: pointer; }
-  .refresh-btn:active { border-color: var(--accent); color: var(--accent); }
-
-  #status { text-align: center; padding: 40px 16px; color: var(--muted); font-family: 'IBM Plex Mono', monospace; font-size: 12px; }
-  .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 10px; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  #content { display: none; }
+  /* Detail view */
+  .detail{padding:0}
+  .detail-nav{display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--border)}
+  .back-btn{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;letter-spacing:0.04em;padding:4px 0;transition:color 0.15s}
+  .back-btn:hover{color:var(--accent)}
+  .detail-divider{color:var(--border);font-size:14px}
+  .detail-fund-label{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:0.06em;text-transform:uppercase}
+  .detail-header{padding:20px 20px 12px}
+  .detail-fund-name{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--accent);margin-bottom:6px}
+  .detail-price{font-family:'IBM Plex Mono',monospace;font-size:36px;font-weight:600;color:var(--text);line-height:1.1;margin-bottom:6px}
+  .detail-change{font-family:'IBM Plex Mono',monospace;font-size:14px;margin-bottom:4px}
+  .detail-date{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted)}
+  .range-btns{display:flex;gap:4px;padding:0 20px 12px;flex-wrap:wrap}
+  .range-btn{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;letter-spacing:0.06em;padding:5px 11px;border-radius:5px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all 0.15s}
+  .range-btn.active{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+  .range-btn:hover:not(.active){color:var(--text);border-color:var(--muted)}
+  .chart-wrap{background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border);height:240px;padding:4px 0}
+  .chart-wrap canvas{height:100%}
+  .returns-section{padding:16px 20px}
+  .section-label{font-size:11px;font-weight:600;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+  table{width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace;font-size:13px}
+  tr{border-bottom:1px solid var(--border)}tr:last-child{border-bottom:none}
+  td{padding:9px 0;vertical-align:middle}td:first-child{color:var(--muted);font-size:12px}td:last-child{text-align:right;font-weight:600}
+  .divider-row td{padding-top:12px;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--border);border-bottom:1px solid var(--border)}
+  .refresh-btn{display:block;width:calc(100% - 40px);margin:0 20px 20px;padding:12px;background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer;transition:all 0.15s}
+  .refresh-btn:hover{border-color:var(--accent);color:var(--accent)}
+  @media(max-width:600px){.overview{grid-template-columns:1fr 1fr;gap:8px;padding:12px}.detail-price{font-size:28px}.range-btns{gap:3px}}
+  @media(max-width:400px){.overview{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 
+<nav>
+  <span class="nav-title">YouWealth</span>
+  <div class="nav-right">
+    <span class="nav-updated" id="nav-updated"></span>
+    <a href="holdings.html" class="nav-link">Holdings ↗</a>
+  </div>
+</nav>
+
 <div id="status"><div class="spinner"></div><br>Loading…</div>
 
 <div id="content">
-  <div class="fund-tabs" id="fund-tabs"></div>
-  <div class="page">
-    <header>
-      <div>
-        <div class="fund-label">BNZ YouWealth</div>
-        <h1 id="fund-title"></h1>
-      </div>
-      <div class="last-updated" id="last-updated"></div>
-    </header>
-    <div id="price-display">
-      <div>
-        <div class="price-label">Unit price (sell)</div>
-        <div class="price-value" id="latest-price">—</div>
-        <div class="price-change" id="price-change"></div>
-      </div>
-      <div style="text-align:right">
-        <div class="price-label">1-day</div>
-        <div class="price-change" id="day-change"></div>
-      </div>
+  <div class="overview" id="overview"></div>
+  <div class="detail" id="detail" style="display:none">
+    <div class="detail-nav">
+      <button class="back-btn" onclick="closeDetail()">← All Funds</button>
+      <span class="detail-divider">·</span>
+      <span class="detail-fund-label" id="detail-fund-label"></span>
+    </div>
+    <div class="detail-header">
+      <div class="detail-fund-name" id="detail-fund-name"></div>
+      <div class="detail-price" id="detail-price"></div>
+      <div class="detail-change" id="detail-change"></div>
+      <div class="detail-date" id="detail-date"></div>
     </div>
     <div class="range-btns">
+      <button class="range-btn" data-days="7">1W</button>
       <button class="range-btn" data-days="30">1M</button>
       <button class="range-btn" data-days="91">3M</button>
       <button class="range-btn" data-days="182">6M</button>
@@ -92,8 +106,10 @@
       <button class="range-btn" data-days="0">All</button>
     </div>
     <div class="chart-wrap"><canvas id="chart"></canvas></div>
-    <div class="section-label">Returns</div>
-    <table id="summary-table"></table>
+    <div class="returns-section">
+      <div class="section-label">Returns</div>
+      <table id="summary-table"></table>
+    </div>
     <button class="refresh-btn" onclick="refresh()">↻ Fetch latest prices</button>
   </div>
 </div>
@@ -119,14 +135,20 @@ const FUND_CODES = {
 };
 
 
-let currentFund = FUND_ORDER[0];
-let allPrices = {};   // fund -> [{date, price}]
-let chart = null;
+let allPrices = {};
+let detailChart = null;
+let cardCharts = {};
 let activeRange = 365;
+let currentFund = null;
 
 function addDays(d, n) { const r = new Date(d); r.setDate(r.getDate() + n); return r; }
 function fmtDate(d) { return d.toISOString().slice(0,10); }
 function isWeekend(d) { return d.getDay()===0 || d.getDay()===6; }
+function cumReturn(p0, p1) { return (!p0||!p1) ? null : (p1/p0-1)*100; }
+function annReturn(p0, p1, days) { return (!p0||!p1||days<=0) ? null : (Math.pow(p1/p0,365.25/days)-1)*100; }
+function priceAt(prices, targetDate) { const td=fmtDate(targetDate); const r=prices.find(p=>p.date>=td); return r?r.price:null; }
+function fmt(v) { if(v===null||isNaN(v)) return "n/a"; return (v>=0?"+":"\u2212")+Math.abs(v).toFixed(2)+"%" }
+function cls(v) { return v===null?"":v>=0?"pos":"neg"; }
 
 async function fetchDay(fundCode, dateStr) {
   const url = `https://api.bnz.co.nz/v1/fundunitprices?date=${dateStr}&fundProduct=retailManagedFund`;
@@ -135,8 +157,7 @@ async function fetchDay(fundCode, dateStr) {
     if (!res.ok) return null;
     const json = await res.json();
     const entry = (json.fundUnitPrices||[]).find(f => f.fundCode === fundCode);
-    if (!entry) return null;
-    return { date: dateStr, price: parseFloat(entry.sellPrice.amount) };
+    return entry ? { date: dateStr, price: parseFloat(entry.sellPrice) } : null;
   } catch { return null; }
 }
 
@@ -144,16 +165,13 @@ async function loadFund(fundName) {
   const cacheKey = "bnz_v3_" + fundName.replace(/ /g,"_");
   let cached = [];
   try { cached = JSON.parse(localStorage.getItem(cacheKey)||"[]"); } catch {}
-
-  // Base from embedded data
   let prices = FUND_DATA[fundName].map(([date,price]) => ({date,price}));
   const dateMap = new Map(prices.map(p => [p.date, p.price]));
   cached.forEach(p => dateMap.set(p.date, p.price));
-
+  prices = [...dateMap.entries()].sort((a,b)=>a[0]<b[0]?-1:1).map(([date,price])=>({date,price}));
   const lastDate = [...dateMap.keys()].sort().pop();
   const today = new Date(); today.setHours(0,0,0,0);
   const fetchFrom = new Date(lastDate); fetchFrom.setDate(fetchFrom.getDate()+1);
-
   if (fetchFrom <= today) {
     const code = FUND_CODES[fundName];
     const newPrices = [];
@@ -162,69 +180,110 @@ async function loadFund(fundName) {
       if (!isWeekend(d)) {
         const ds = fmtDate(d);
         const r = await fetchDay(code, ds);
-        if (r) { newPrices.push(r); dateMap.set(ds, r.price); }
+        if (r) newPrices.push(r);
       }
       d.setDate(d.getDate()+1);
     }
-    if (newPrices.length > 0) {
+    if (newPrices.length) {
       const allCached = [...cached, ...newPrices].filter((p,i,a) => a.findIndex(x=>x.date===p.date)===i);
       try { localStorage.setItem(cacheKey, JSON.stringify(allCached)); } catch {}
+      newPrices.forEach(p => dateMap.set(p.date, p.price));
+      prices = [...dateMap.entries()].sort((a,b)=>a[0]<b[0]?-1:1).map(([date,price])=>({date,price}));
     }
   }
-
-  return Array.from(dateMap.entries()).map(([date,price]) => ({date,price})).sort((a,b) => a.date.localeCompare(b.date));
+  return prices;
 }
 
-function cumReturn(p0, p1) { return (!p0||!p1) ? null : (p1/p0-1)*100; }
-function annReturn(p0, p1, days) { return (!p0||!p1||days<=0) ? null : (Math.pow(p1/p0,365.25/days)-1)*100; }
-function priceAt(prices, targetDate) { const td=fmtDate(targetDate); const r=prices.find(p=>p.date>=td); return r?r.price:null; }
-function fmt(v) { if(v===null||isNaN(v)) return "n/a"; return (v>=0?"+":"−")+Math.abs(v).toFixed(2)+"%"; }
-function cls(v) { return v===null?"":v>=0?"pos":"neg"; }
+// ── Overview cards ──────────────────────────────────────────
+function buildOverview() {
+  const container = document.getElementById('overview');
+  container.innerHTML = FUND_ORDER.map(fund => {
+    const id = fund.replace(/ /g,'_');
+    return `<div class="fund-card" data-fund="${fund}" onclick="openDetail('${fund}')">
+      <div class="card-top">
+        <div class="card-name">${FUND_LABELS[fund]}</div>
+        <div class="card-arrow">↗</div>
+      </div>
+      <div class="card-price" id="cp-${id}">—</div>
+      <div class="card-change" id="cc-${id}"></div>
+      <div class="card-return" id="cr-${id}"></div>
+      <div class="card-sparkline"><canvas id="cs-${id}" height="64"></canvas></div>
+    </div>`;
+  }).join('');
+}
 
-function renderFund(fundName) {
-  const prices = allPrices[fundName];
-  if (!prices || prices.length === 0) return;
-
+function updateCard(fundName, prices) {
+  const id = fundName.replace(/ /g,'_');
   const latest = prices[prices.length-1];
   const prev = prices[prices.length-2];
-  const p1 = latest.price;
-  const today = new Date(latest.date);
-
-  // Header
-  document.getElementById("fund-title").textContent = FUND_LABELS[fundName];
-  document.getElementById("last-updated").innerHTML = `As at<br>${latest.date}`;
-  document.getElementById("latest-price").textContent = p1.toFixed(4);
-
+  document.getElementById(`cp-${id}`).textContent = latest.price.toFixed(4);
   if (prev) {
-    const d = p1 - prev.price;
+    const d = latest.price - prev.price;
     const p = (d/prev.price)*100;
-    const sign = d>=0?"+":"−";
-    const c = d>=0?"pos":"neg";
-    document.getElementById("day-change").innerHTML = `<span class="${c}">${sign}${Math.abs(d).toFixed(4)}</span>`;
-    document.getElementById("price-change").innerHTML = `<span class="${c}">${sign}${Math.abs(p).toFixed(2)}%</span> vs prev`;
+    const sign = d>=0?'+':'\u2212'; const c = d>=0?'pos':'neg';
+    document.getElementById(`cc-${id}`).innerHTML = `<span class="${c}">${sign}${Math.abs(p).toFixed(2)}%</span>`;
   }
+  // 1Y return
+  const today = new Date(latest.date);
+  const yr = addDays(today,-365);
+  const p0 = priceAt(prices, yr);
+  if (p0) {
+    const ret = (latest.price/p0-1)*100;
+    const sign = ret>=0?'+':'\u2212'; const c = ret>=0?'pos':'neg';
+    document.getElementById(`cr-${id}`).innerHTML = `<span class="${c}">${sign}${Math.abs(ret).toFixed(1)}%</span> <span style="color:var(--muted);font-size:10px">1Y</span>`;
+  }
+  drawCardSparkline(fundName, prices);
+}
 
-  // Table
-  const rows = [
-    { label: "1 week",   val: cumReturn(priceAt(prices,addDays(today,-7)),   p1) },
-    { label: "1 month",  val: cumReturn(priceAt(prices,addDays(today,-30)),  p1) },
-    { label: "3 months", val: cumReturn(priceAt(prices,addDays(today,-91)),  p1) },
-    { label: "6 months", val: cumReturn(priceAt(prices,addDays(today,-182)), p1) },
-    { label: "1 year",   val: cumReturn(priceAt(prices,addDays(today,-365)), p1) },
-    null,
-    { label: "3 years (p.a.)", val: annReturn(priceAt(prices,addDays(today,-3*365.25)), p1, 3*365.25) },
-    { label: "5 years (p.a.)", val: annReturn(priceAt(prices,addDays(today,-5*365.25)), p1, 5*365.25) },
-    { label: "7 years (p.a.)", val: annReturn(priceAt(prices,addDays(today,-7*365.25)), p1, 7*365.25) },
-    { label: "Since inception (p.a.)", val: annReturn(prices[0].price, p1, (today-new Date(prices[0].date))/86400000) },
-  ];
-  document.getElementById("summary-table").innerHTML = rows.map(r =>
-    r===null
-      ? `<tr class="divider-row"><td colspan="2">annualised</td></tr>`
-      : `<tr><td>${r.label}</td><td class="${cls(r.val)}">${fmt(r.val)}</td></tr>`
-  ).join("");
+function drawCardSparkline(fundName, prices) {
+  const id = fundName.replace(/ /g,'_');
+  const canvas = document.getElementById(`cs-${id}`);
+  if (!canvas) return;
+  const today = new Date(prices[prices.length-1].date);
+  const from = addDays(today,-365);
+  const slice = prices.filter(p => p.date >= fmtDate(from));
+  const data = slice.map(p => p.price);
+  const rising = data[data.length-1] >= data[0];
+  const colour = rising ? '#00d4aa' : '#ff4757';
+  if (cardCharts[id]) cardCharts[id].destroy();
+  cardCharts[id] = new Chart(canvas.getContext('2d'), {
+    type: 'line',
+    data: { labels: slice.map(p=>p.date), datasets: [{ data, borderColor: colour, backgroundColor: colour+'18', borderWidth: 1.5, pointRadius: 0, fill: true, tension: 0.2 }] },
+    options: { responsive: true, maintainAspectRatio: false, animation: false,
+      plugins: { legend:{display:false}, tooltip:{enabled:false} },
+      scales: { x:{display:false}, y:{display:false} }, layout:{padding:0} }
+  });
+}
 
-  // Chart
+// ── Detail view ─────────────────────────────────────────────
+function openDetail(fundName) {
+  currentFund = fundName;
+  document.getElementById('overview').style.display = 'none';
+  document.getElementById('detail').style.display = 'block';
+  document.getElementById('detail-fund-label').textContent = FUND_LABELS[fundName];
+  renderDetail(fundName, allPrices[fundName]);
+}
+
+function closeDetail() {
+  document.getElementById('detail').style.display = 'none';
+  document.getElementById('overview').style.display = 'grid';
+  currentFund = null;
+}
+
+function renderDetail(fundName, prices) {
+  const latest = prices[prices.length-1];
+  const prev = prices[prices.length-2];
+  document.getElementById('detail-fund-name').textContent = FUND_LABELS[fundName] + ' Fund';
+  document.getElementById('detail-price').textContent = latest.price.toFixed(4);
+  document.getElementById('detail-date').textContent = 'as at ' + latest.date;
+  if (prev) {
+    const d = latest.price - prev.price;
+    const p = (d/prev.price)*100;
+    const sign = d>=0?'+':'\u2212'; const c = d>=0?'pos':'neg';
+    document.getElementById('detail-change').innerHTML = `<span class="${c}">${sign}${Math.abs(d).toFixed(4)} &nbsp;(${sign}${Math.abs(p).toFixed(2)}%)</span>`;
+  }
   buildChart(prices, activeRange);
+  renderReturns(fundName, prices);
 }
 
 function buildChart(prices, days) {
@@ -235,83 +294,89 @@ function buildChart(prices, days) {
   const labels = slice.map(p => p.date);
   const data = slice.map(p => p.price);
   const rising = data[data.length-1] >= data[0];
-  const colour = rising ? "#00d4aa" : "#ff4757";
-  if (chart) {
-    chart.data.labels = labels;
-    chart.data.datasets[0].data = data;
-    chart.data.datasets[0].borderColor = colour;
-    chart.data.datasets[0].backgroundColor = colour+"18";
-    chart.update("none");
+  const colour = rising ? '#00d4aa' : '#ff4757';
+  if (detailChart) {
+    detailChart.data.labels = labels;
+    detailChart.data.datasets[0].data = data;
+    detailChart.data.datasets[0].borderColor = colour;
+    detailChart.data.datasets[0].backgroundColor = colour+'18';
+    detailChart.update('none');
   } else {
-    chart = new Chart(document.getElementById("chart").getContext("2d"), {
-      type: "line",
-      data: { labels, datasets: [{ data, borderColor: colour, backgroundColor: colour+"18", borderWidth: 1.5, pointRadius: 0, fill: true, tension: 0.2 }] },
+    detailChart = new Chart(document.getElementById('chart').getContext('2d'), {
+      type: 'line',
+      data: { labels, datasets: [{ data, borderColor: colour, backgroundColor: colour+'18', borderWidth: 1.5, pointRadius: 0, fill: true, tension: 0.2 }] },
       options: {
         responsive: true, maintainAspectRatio: false, animation: false,
-        plugins: { legend:{display:false}, tooltip:{ mode:"index", intersect:false,
-          callbacks:{label:c=>" "+c.parsed.y.toFixed(4), title:c=>c[0].label},
-          backgroundColor:"#1e2d40",titleColor:"#64748b",bodyColor:"#e2e8f0",borderColor:"#1e2d40",borderWidth:1}},
-        scales:{
-          x:{ticks:{color:"#64748b",font:{family:"IBM Plex Mono",size:10},maxTicksLimit:6,maxRotation:0},grid:{color:"#1e2d40"}},
-          y:{ticks:{color:"#64748b",font:{family:"IBM Plex Mono",size:10},maxTicksLimit:5},grid:{color:"#1e2d40"}}
+        plugins: { legend:{display:false}, tooltip:{ mode:'index', intersect:false,
+          callbacks:{ label:c=>' '+c.parsed.y.toFixed(4), title:c=>c[0].label },
+          backgroundColor:'#1e2d40',titleColor:'#64748b',bodyColor:'#e2e8f0',borderColor:'#1e2d40',borderWidth:1 } },
+        scales: {
+          x:{ticks:{color:'#64748b',font:{family:'IBM Plex Mono',size:10},maxTicksLimit:6,maxRotation:0},grid:{color:'#1e2d40'}},
+          y:{ticks:{color:'#64748b',font:{family:'IBM Plex Mono',size:10},maxTicksLimit:5,callback:v=>v.toFixed(3)},grid:{color:'#1e2d40'},position:'right'}
         }
       }
     });
   }
 }
 
-function switchFund(fundName) {
-  currentFund = fundName;
-  document.querySelectorAll(".fund-tab").forEach(t => t.classList.toggle("active", t.dataset.fund===fundName));
-  if (allPrices[fundName]) {
-    renderFund(fundName);
-  } else {
-    loadFund(fundName).then(p => { allPrices[fundName]=p; renderFund(fundName); });
-  }
+function renderReturns(fundName, prices) {
+  const latest = prices[prices.length-1];
+  const p1 = latest.price;
+  const today = new Date(latest.date);
+  const rows = [
+    ['1 week',    cumReturn(priceAt(prices,addDays(today,-7)),   p1)],
+    ['1 month',   cumReturn(priceAt(prices,addDays(today,-30)),  p1)],
+    ['3 months',  cumReturn(priceAt(prices,addDays(today,-91)),  p1)],
+    ['6 months',  cumReturn(priceAt(prices,addDays(today,-182)), p1)],
+    ['1 year',    cumReturn(priceAt(prices,addDays(today,-365)), p1)],
+    ['divider'],
+    ['3 years (ann.)', annReturn(priceAt(prices,addDays(today,-1095)),p1,1095)],
+    ['Since launch',   cumReturn(prices[0].price, p1)],
+  ];
+  document.getElementById('summary-table').innerHTML = rows.map(([label,val]) => {
+    if (label==='divider') return `<tr class="divider-row"><td colspan="2">Annualised</td></tr>`;
+    return `<tr><td>${label}</td><td class="${cls(val)}">${fmt(val)}</td></tr>`;
+  }).join('');
 }
 
-document.querySelectorAll(".range-btn").forEach(btn => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll(".range-btn").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
+// ── Range buttons ────────────────────────────────────────────
+document.querySelectorAll('.range-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
     activeRange = parseInt(btn.dataset.days);
-    if (allPrices[currentFund]) buildChart(allPrices[currentFund], activeRange);
+    if (currentFund && allPrices[currentFund]) buildChart(allPrices[currentFund], activeRange);
   });
 });
 
 async function refresh() {
-  FUND_ORDER.forEach(f => {
-    try { localStorage.removeItem("bnz_v3_"+f.replace(/ /g,"_")); } catch {}
-  });
+  FUND_ORDER.forEach(f => { try { localStorage.removeItem("bnz_v3_"+f.replace(/ /g,"_")); } catch {} });
   allPrices = {};
+  if (detailChart) { detailChart.destroy(); detailChart = null; }
+  Object.values(cardCharts).forEach(c => c.destroy());
+  cardCharts = {};
   await init();
 }
 
 async function init() {
-  document.getElementById("status").style.display = "block";
-  document.getElementById("content").style.display = "none";
-
-  // Build tabs
-  const tabBar = document.getElementById("fund-tabs");
-  tabBar.innerHTML = FUND_ORDER.map(f =>
-    `<div class="fund-tab${f===currentFund?" active":""}" data-fund="${f}" onclick="switchFund('${f}')">${FUND_LABELS[f]}</div>`
-  ).join("");
-
+  document.getElementById('status').style.display = 'block';
+  document.getElementById('content').style.display = 'none';
+  buildOverview();
   try {
-    // Load first fund immediately
-    allPrices[currentFund] = await loadFund(currentFund);
-    document.getElementById("status").style.display = "none";
-    document.getElementById("content").style.display = "block";
-    renderFund(currentFund);
-
-    // Load remaining funds in background
-    for (const f of FUND_ORDER) {
-      if (f !== currentFund) {
-        loadFund(f).then(p => { allPrices[f] = p; });
-      }
+    // Load all funds (first one eagerly, rest in background)
+    const first = FUND_ORDER[0];
+    allPrices[first] = await loadFund(first);
+    document.getElementById('status').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+    updateCard(first, allPrices[first]);
+    const latest = allPrices[first][allPrices[first].length-1];
+    document.getElementById('nav-updated').textContent = latest.date;
+    // Load remaining funds
+    for (const f of FUND_ORDER.slice(1)) {
+      loadFund(f).then(p => { allPrices[f] = p; updateCard(f, p); });
     }
   } catch(e) {
-    document.getElementById("status").innerHTML = `⚠ Error: ${e.message}`;
+    document.getElementById('status').innerHTML = `\u26a0 Error: ${e.message}`;
   }
 }
 
