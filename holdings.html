@@ -130,7 +130,8 @@
       align-items: center;
       transition: background 0.12s;
     }
-    .holding-row:hover { background: rgba(255,255,255,0.025); }
+    .holding-row { cursor: pointer; }
+    .holding-row:hover { background: rgba(255,255,255,0.04); }
     .holding-row:last-child { border-bottom: none; }
     .holding-row > * { padding: 0 6px; }
 
@@ -214,6 +215,90 @@
       }
       .company-name { font-size: 12px; }
     }
+
+    /* Detail modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      width: 100%;
+      max-width: 640px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 16px 20px 0;
+    }
+    .modal-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .modal-ticker {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 20px;
+      cursor: pointer;
+      padding: 0 0 0 12px;
+      line-height: 1;
+    }
+    .modal-close:hover { color: var(--text); }
+    .modal-price-row {
+      display: flex;
+      gap: 20px;
+      padding: 12px 20px 4px;
+      font-family: 'IBM Plex Mono', monospace;
+      flex-wrap: wrap;
+    }
+    .modal-stat .label { font-size: 9px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 3px; }
+    .modal-stat .val { font-size: 16px; font-weight: 600; }
+    .modal-stat .val.accent { color: var(--accent); }
+    .modal-stat .val.up { color: var(--up); }
+    .modal-stat .val.down { color: var(--down); }
+    .modal-range-btns {
+      display: flex;
+      gap: 4px;
+      padding: 8px 20px;
+    }
+    .modal-range-btn {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 5px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .modal-range-btn.active { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+    .modal-chart-wrap {
+      height: 200px;
+      padding: 0 12px 12px;
+    }
+    .modal-chart-wrap canvas { display: block; width: 100% !important; height: 188px !important; }
   </style>
 </head>
 <body>
@@ -246,6 +331,31 @@
     </div>
     <div id="holdings-list"></div>
   </div>
+
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-name" id="modal-name"></div>
+        <div class="modal-ticker" id="modal-ticker"></div>
+      </div>
+      <button class="modal-close" onclick="closeModalDirect()">✕</button>
+    </div>
+    <div class="modal-price-row">
+      <div class="modal-stat"><div class="label">Weight</div><div class="val accent" id="modal-weight"></div></div>
+      <div class="modal-stat"><div class="label">1Y Return</div><div class="val" id="modal-return"></div></div>
+    </div>
+    <div class="modal-range-btns">
+      <button class="modal-range-btn" data-weeks="4">1M</button>
+      <button class="modal-range-btn" data-weeks="13">3M</button>
+      <button class="modal-range-btn" data-weeks="26">6M</button>
+      <button class="modal-range-btn active" data-weeks="52">1Y</button>
+    </div>
+    <div class="modal-chart-wrap">
+      <canvas id="modal-canvas"></canvas>
+    </div>
+  </div>
+</div>
 
 </div>
 
@@ -381,6 +491,7 @@ function buildRows() {
   HOLDINGS.forEach((h, i) => {
     const row = document.createElement('div');
     row.className = 'holding-row';
+    row.onclick = () => openDetail(i);
     const barW = (h.weight / MAX_WEIGHT * 100).toFixed(2);
     row.innerHTML =
       `<div class="rank">${i + 1}</div>` +
@@ -401,6 +512,93 @@ buildRows();
 
 const YAHOO = 'https://query1.finance.yahoo.com/v8/finance/chart/';
 const chartInstances = {};
+
+const priceCache = {};  // index -> pts array
+let modalChart = null;
+let modalActiveWeeks = 52;
+
+document.querySelectorAll('.modal-range-btn').forEach(btn => {
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    document.querySelectorAll('.modal-range-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    modalActiveWeeks = parseInt(btn.dataset.weeks);
+    const idx = parseInt(document.getElementById('modal-overlay').dataset.idx);
+    if (priceCache[idx]) drawModalChart(priceCache[idx]);
+  });
+});
+
+function openDetail(i) {
+  const h = HOLDINGS[i];
+  document.getElementById('modal-name').textContent = h.name;
+  document.getElementById('modal-ticker').textContent = h.ticker + '  ·  ' + h.weight.toFixed(2) + '% of fund';
+  document.getElementById('modal-weight').textContent = h.weight.toFixed(2) + '%';
+  const retEl = document.getElementById('ret' + i);
+  const retVal = document.getElementById('modal-return');
+  retVal.textContent = retEl.textContent;
+  retVal.className = 'val ' + (retEl.classList.contains('up') ? 'up' : retEl.classList.contains('down') ? 'down' : '');
+  const overlay = document.getElementById('modal-overlay');
+  overlay.dataset.idx = i;
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  // Reset to 1Y
+  modalActiveWeeks = 52;
+  document.querySelectorAll('.modal-range-btn').forEach(b => b.classList.toggle('active', b.dataset.weeks === '52'));
+  if (priceCache[i]) {
+    drawModalChart(priceCache[i]);
+  } else {
+    if (modalChart) { modalChart.destroy(); modalChart = null; }
+  }
+}
+
+function closeModal(e) {
+  if (e.target === document.getElementById('modal-overlay')) closeModalDirect();
+}
+function closeModalDirect() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function drawModalChart(pts) {
+  const slice = pts.slice(-modalActiveWeeks);
+  const isUp = slice[slice.length-1] >= slice[0];
+  const color = isUp ? '#00d4aa' : '#ff4757';
+  const canvas = document.getElementById('modal-canvas');
+  if (modalChart) { modalChart.destroy(); modalChart = null; }
+  modalChart = new Chart(canvas.getContext('2d'), {
+    type: 'line',
+    data: {
+      labels: slice.map((_, k) => k),
+      datasets: [{
+        data: slice,
+        borderColor: color,
+        backgroundColor: isUp ? 'rgba(0,212,170,0.12)' : 'rgba(255,71,87,0.12)',
+        borderWidth: 2,
+        pointRadius: 0,
+        tension: 0.3,
+        fill: true,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          mode: 'index', intersect: false,
+          callbacks: { label: c => ' ' + c.parsed.y.toFixed(2), title: () => '' },
+          backgroundColor: '#1e2d40', bodyColor: '#e2e8f0', borderColor: '#1e2d40', borderWidth: 1
+        }
+      },
+      scales: {
+        x: { display: false },
+        y: { ticks: { color: '#64748b', font: { family: 'IBM Plex Mono', size: 10 }, maxTicksLimit: 4 }, grid: { color: '#1e2d40' }, position: 'right' }
+      }
+    }
+  });
+}
+
 
 async function fetchTicker(ticker) {
   const url = `${YAHOO}${encodeURIComponent(ticker)}?range=1y&interval=1wk&events=div&corsDomain=finance.yahoo.com`;
@@ -454,6 +652,7 @@ function drawSparkline(id, pts, isUp) {
 
 async function loadHolding(i) {
   const pts = await fetchTicker(HOLDINGS[i].ticker);
+  if (pts) priceCache[i] = pts;
   loadedCount++;
   document.getElementById('loaded-count').textContent = loadedCount;
   document.getElementById('progress-fill').style.width = (loadedCount / N * 100) + '%';
