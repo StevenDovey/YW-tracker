@@ -78,18 +78,6 @@
       padding: 24px;
     }
 
-    .meta-bar {
-      font-family: 'IBM Plex Mono', monospace;
-      font-size: 11px;
-      color: var(--muted);
-      margin-bottom: 14px;
-      display: flex;
-      gap: 20px;
-      flex-wrap: wrap;
-      align-items: center;
-    }
-    .meta-bar .hi { color: var(--accent); font-weight: 600; }
-    .meta-bar .sep { color: var(--border); }
 
     .progress-wrap {
       height: 2px;
@@ -240,21 +228,7 @@
 
 <div class="container">
 
-  <div class="meta-bar">
-    <span><span class="hi" id="stat-count">—</span> holdings</span>
-    <span class="sep">·</span>
-    <span><span class="hi" id="stat-coverage">—</span> of fund NAV</span>
-    <span class="sep">·</span>
-    <span>0.45% annual charge</span>
-    <span class="sep">·</span>
-    <span>Risk 7/7</span>
-    <span class="sep">·</span>
-    <span>100% growth assets</span>
-    <span class="sep">·</span>
-    <span>Data: 30 Sep 2025</span>
-  </div>
-
-  <div class="progress-wrap">
+<div class="progress-wrap">
     <div class="progress-fill" id="progress-fill"></div>
   </div>
 
@@ -398,8 +372,6 @@ let loadedCount = 0;
 const N = HOLDINGS.length;
 
 document.getElementById('total-count').textContent = N;
-document.getElementById('stat-count').textContent = N;
-document.getElementById('stat-coverage').textContent = TOTAL_WEIGHT.toFixed(1) + '%';
 
 function buildRows() {
   const frag = document.createDocumentFragment();
