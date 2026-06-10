@@ -27,7 +27,7 @@
     }
     header {
       border-bottom: 1px solid var(--border);
-      padding: 18px 24px;
+      padding: 12px 16px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -35,9 +35,9 @@
       top: 0;
       background: var(--bg);
       z-index: 10;
-      gap: 16px;
+      gap: 10px;
+      flex-wrap: nowrap;
     }
-    .header-left { display: flex; align-items: center; gap: 20px; min-width: 0; }
     .back-link {
       color: var(--muted);
       text-decoration: none;
@@ -45,22 +45,27 @@
       font-size: 11px;
       letter-spacing: 0.06em;
       white-space: nowrap;
+      flex-shrink: 0;
       transition: color 0.2s;
     }
     .back-link:hover { color: var(--accent); }
+    .header-title {
+      flex: 1;
+      min-width: 0;
+      text-align: center;
+    }
     .header-title h1 {
       font-family: 'IBM Plex Mono', monospace;
-      font-size: 15px;
+      font-size: 13px;
       font-weight: 600;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.03em;
       color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .header-title .subtitle {
-      font-family: 'IBM Plex Mono', monospace;
-      font-size: 10px;
-      color: var(--muted);
-      letter-spacing: 0.04em;
-      margin-top: 3px;
+      display: none;
     }
     .status-bar {
       font-family: 'IBM Plex Mono', monospace;
@@ -214,15 +219,13 @@
 <body>
 
 <header>
-  <div class="header-left">
-    <a href="index.html" class="back-link">← UNIT PRICES</a>
-    <div class="header-title">
-      <h1>YouWealth High Growth — Holdings</h1>
-      <div class="subtitle">Portfolio as at 30 Sep 2025 · NZ Disclose Register FND46936 · 1yr price data via Yahoo Finance</div>
-    </div>
+  <a href="index.html" class="back-link">← UNIT PRICES</a>
+  <div class="header-title">
+    <h1>High Growth Holdings</h1>
+    <div class="subtitle">Portfolio as at 30 Sep 2025 · NZ Disclose Register FND46936</div>
   </div>
   <div class="status-bar">
-    <span class="accent" id="loaded-count">0</span> / <span id="total-count">—</span> loaded
+    <span class="accent" id="loaded-count">0</span> / <span id="total-count">—</span>
   </div>
 </header>
 
@@ -400,7 +403,7 @@ const YAHOO = 'https://query1.finance.yahoo.com/v8/finance/chart/';
 const chartInstances = {};
 
 async function fetchTicker(ticker) {
-  const url = `${YAHOO}${encodeURIComponent(ticker)}?range=1y&interval=1wk`;
+  const url = `${YAHOO}${encodeURIComponent(ticker)}?range=1y&interval=1wk&events=div&corsDomain=finance.yahoo.com`;
   try {
     const r = await fetch(url);
     if (!r.ok) return null;
