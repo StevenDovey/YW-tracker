@@ -8,7 +8,7 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
      background:#f4f6f4;color:#222;padding:1.5rem}
-.container{max-width:700px;margin:0 auto}
+.container{max-width:480px;margin:0 auto}
 h1{font-size:1.35rem;color:#2c4a2c;margin-bottom:.2rem}
 .subtitle{color:#666;font-size:.85rem;margin-bottom:1.4rem}
 .card{background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.1);
@@ -37,17 +37,15 @@ button{padding:.45rem 1.2rem;border:none;border-radius:5px;
 .count-note{font-size:.78rem;color:#888;margin-left:1rem}
 .table-wrap{overflow-x:auto;border-radius:0 0 8px 8px;
             box-shadow:0 1px 4px rgba(0,0,0,.1)}
-table{width:100%;border-collapse:collapse;font-size:.88rem;background:#fff}
-thead th{background:#2c4a2c;color:#fff;padding:.55rem .85rem;
-          text-align:right;font-weight:600;white-space:nowrap}
-thead th.L{text-align:left}
+table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:.88rem;background:#fff}
+thead th{background:#2c4a2c;color:#fff;padding:.45rem .4rem;
+          text-align:center;font-weight:600;white-space:nowrap;font-size:.8rem}
 tbody tr{border-bottom:1px solid #eee}
 tbody tr:last-child{border-bottom:none}
 tbody tr:nth-child(even){background:#f9fbf9}
 tbody tr.selected{background:#fff3cd!important}
 tbody tr.selected td{color:#7a5c00;font-weight:700}
-td{padding:.48rem .85rem;text-align:right;white-space:nowrap}
-td.L{text-align:left}
+td{padding:.42rem .4rem;text-align:center;white-space:nowrap}
 .badge{display:inline-block;background:#ffc107;color:#533f03;font-size:.68rem;
        font-weight:700;padding:.1rem .38rem;border-radius:3px;
        margin-left:.35rem;vertical-align:middle}
@@ -77,8 +75,11 @@ td.L{text-align:left}
     <table>
       <thead>
         <tr>
-          <th class="L">Tree</th>
-          <th>DBH</th><th>HT</th><th>DamageZ</th><th>StressRatio</th>
+          <th style="width:58px">Tree</th>
+          <th style="width:58px">DBH</th>
+          <th style="width:48px">HT</th>
+          <th style="width:72px">DamageZ</th>
+          <th style="width:88px">StressRatio</th>
         </tr>
       </thead>
       <tbody id="resultsBody"></tbody>
@@ -140,7 +141,7 @@ function doSearch(){
     const tr=document.createElement('tr');
     if(isSel)tr.className='selected';
     tr.innerHTML=
-      '<td class="L">'+r.TreeNo+(isSel?'<span class="badge">selected</span>':'')+'</td>'+
+      '<td>'+r.TreeNo+(isSel?'<span class="badge">&#10003;</span>':'')+'</td>'+
       '<td>'+f1(r.DBH)+'</td>'+
       '<td>'+f1(r.HT)+'</td>'+
       '<td>'+f1(r.DamageZ)+'</td>'+
