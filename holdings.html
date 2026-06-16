@@ -321,6 +321,17 @@
     }
     .list-range-btn.active { background: var(--accent); border-color: var(--accent); color: var(--bg); }
     .list-range-btn:hover:not(.active) { color: var(--text); border-color: var(--muted); }
+    .index-chart-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      height: 160px;
+      margin-bottom: 10px;
+      padding: 8px 4px 4px;
+      position: relative;
+    }
+    .index-chart-wrap canvas { display: block; width: 100% !important; height: 100% !important; }
+
     .weighted-return {
       font-family: 'IBM Plex Mono', monospace;
       font-size: 12px;
@@ -373,6 +384,9 @@
       <span class="wr-label" id="wr-label">Weighted</span>
       <span class="wr-val" id="wr-val">—</span>
     </div>
+  </div>
+  <div class="index-chart-wrap">
+    <canvas id="index-chart"></canvas>
   </div>
   <div class="table-wrap">
     <div class="col-header">
@@ -605,6 +619,84 @@ function updateWeightedReturn(wSum, wTotal) {
   const el = document.getElementById('wr-val');
   el.textContent = (wr >= 0 ? '+' : '') + wr.toFixed(2) + '%';
   el.className = 'wr-val ' + (wr >= 0 ? 'up' : 'down');
+  buildWeightedChart();
+}
+
+let indexChart = null;
+function buildWeightedChart() {
+  // Build normalised weighted index series
+  // For each loaded holding, get slice, normalise to start=1, weight it
+  const series = [];
+  let minLen = Infinity;
+  for (let i = 0; i < N; i++) {
+    const c = priceCache[i];
+    if (!c) continue;
+    const s = c.pts.slice(-activeListWeeks);
+    if (s.length < 2 || s[0] === 0) continue;
+    series.push({ norm: s.map(v => v / s[0]), weight: HOLDINGS[i].weight });
+    if (s.length < minLen) minLen = s.length;
+  }
+  if (series.length === 0 || minLen < 2) return;
+
+  // Weighted average at each time step
+  const totalW = series.reduce((a, s) => a + s.weight, 0);
+  const indexPts = Array.from({ length: minLen }, (_, t) => {
+    const val = series.reduce((a, s) => a + s.norm[s.norm.length - minLen + t] * s.weight, 0) / totalW;
+    return (val - 1) * 100; // as % return from start
+  });
+
+  const rising = indexPts[indexPts.length - 1] >= 0;
+  const color = rising ? '#00d4aa' : '#ff4757';
+  const labels = Array.from({ length: minLen }, (_, i) => i);
+
+  if (indexChart) {
+    indexChart.data.labels = labels;
+    indexChart.data.datasets[0].data = indexPts;
+    indexChart.data.datasets[0].borderColor = color;
+    indexChart.data.datasets[0].backgroundColor = rising ? 'rgba(0,212,170,0.1)' : 'rgba(255,71,87,0.1)';
+    indexChart.update('none');
+  } else {
+    indexChart = new Chart(document.getElementById('index-chart').getContext('2d'), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          data: indexPts,
+          borderColor: color,
+          backgroundColor: rising ? 'rgba(0,212,170,0.1)' : 'rgba(255,71,87,0.1)',
+          borderWidth: 2,
+          pointRadius: 0,
+          tension: 0.3,
+          fill: true,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            mode: 'index', intersect: false,
+            callbacks: {
+              label: c => (c.parsed.y >= 0 ? '+' : '') + c.parsed.y.toFixed(2) + '%',
+              title: () => ''
+            },
+            backgroundColor: '#1e2d40', bodyColor: '#e2e8f0', borderColor: '#1e2d40', borderWidth: 1
+          }
+        },
+        scales: {
+          x: { display: false },
+          y: {
+            ticks: { color: '#64748b', font: { family: 'IBM Plex Mono', size: 10 }, maxTicksLimit: 4,
+              callback: v => (v >= 0 ? '+' : '') + v.toFixed(1) + '%' },
+            grid: { color: '#1e2d40' },
+            position: 'right'
+          }
+        }
+      }
+    });
+  }
 }
 let modalChart = null;
 let modalActiveWeeks = 52;
