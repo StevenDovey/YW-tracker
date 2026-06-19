@@ -192,6 +192,17 @@
 
     .chart-cell { height: 56px; position: relative; }
     .chart-cell canvas { display: block; width: 100% !important; height: 44px !important; }
+    .date-label {
+      position: absolute;
+      bottom: 2px;
+      right: 4px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 8px;
+      color: var(--muted);
+      opacity: 0.65;
+      pointer-events: none;
+      line-height: 1;
+    }
 
     @media (max-width: 1000px) {
       .col-header, .holding-row {
@@ -377,8 +388,8 @@
   </div>
 
   <div class="range-bar">
-    <button class="list-range-btn" data-weeks="2">1W</button>
-    <button class="list-range-btn" data-weeks="4">1M</button>
+    <button class="list-range-btn" data-weeks="2" data-days="5">1W</button>
+    <button class="list-range-btn" data-weeks="4" data-days="21">1M</button>
     <button class="list-range-btn" data-weeks="13">3M</button>
     <button class="list-range-btn" data-weeks="26">6M</button>
     <button class="list-range-btn active" data-weeks="52">1Y</button>
@@ -589,23 +600,52 @@ const chartInstances = {};
 
 const priceCache = {};  // index -> { pts, lastDate }
 let activeListWeeks = 52;
+let activeListDays = 0; // set for 1W/1M; 0 means use weekly data
+
+let redrawTimer = null;
+function scheduleRedraw() {
+  clearTimeout(redrawTimer);
+  redrawTimer = setTimeout(redrawAll, 60);
+}
 
 document.querySelectorAll('.list-range-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.list-range-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     activeListWeeks = parseInt(btn.dataset.weeks);
+    activeListDays = btn.dataset.days ? parseInt(btn.dataset.days) : 0;
     redrawAll();
+    if (activeListDays) triggerDailyFetches();
   });
 });
+
+function triggerDailyFetches() {
+  HOLDINGS.forEach((h, i) => {
+    if (!modalDailyCache[i]) {
+      fetchTickerDaily(h.ticker).then(result => {
+        if (result) {
+          modalDailyCache[i] = result;
+          if (activeListDays) scheduleRedraw();
+        }
+      });
+    }
+  });
+}
+
+function getListSlice(i) {
+  if (activeListDays && modalDailyCache[i]?.pts) {
+    return modalDailyCache[i].pts.slice(-activeListDays);
+  }
+  return priceCache[i]?.pts.slice(-activeListWeeks) ?? null;
+}
 
 function redrawAll() {
   let wSum = 0, wTotal = 0;
   for (let i = 0; i < N; i++) {
     const cache = priceCache[i];
     if (!cache) continue;
-    const sliced = cache.pts.slice(-activeListWeeks);
-    if (sliced.length < 2) continue;
+    const sliced = getListSlice(i);
+    if (!sliced || sliced.length < 2) continue;
     const ret = (sliced[sliced.length-1] - sliced[0]) / sliced[0] * 100;
     const isUp = ret >= 0;
     const retEl = document.getElementById('ret' + i);
@@ -634,10 +674,9 @@ function buildWeightedChart() {
   const series = [];
   let minLen = Infinity;
   for (let i = 0; i < N; i++) {
-    const c = priceCache[i];
-    if (!c) continue;
-    const s = c.pts.slice(-activeListWeeks);
-    if (s.length < 2 || s[0] === 0) continue;
+    if (!priceCache[i]) continue;
+    const s = getListSlice(i);
+    if (!s || s.length < 2 || s[0] === 0) continue;
     series.push({ norm: s.map(v => v / s[0]), weight: HOLDINGS[i].weight });
     if (s.length < minLen) minLen = s.length;
   }
@@ -758,13 +797,14 @@ function closeModalDirect() {
 function drawModalChart() {
   const daily = modalDailyCache[modalIdx];
   const weekly = priceCache[modalIdx]?.pts;
-  let slice;
+  let slice, dateLabels;
   if (daily) {
-    slice = daily.slice(-modalActiveDays);
+    slice = daily.pts.slice(-modalActiveDays);
+    dateLabels = daily.dates.slice(-modalActiveDays);
   } else if (weekly) {
-    // weekly fallback: approximate days to weeks
     const weekCount = Math.max(2, Math.round(modalActiveDays / 5));
     slice = weekly.slice(-weekCount);
+    dateLabels = null;
   } else {
     if (modalChart) { modalChart.destroy(); modalChart = null; }
     return;
@@ -776,7 +816,7 @@ function drawModalChart() {
   modalChart = new Chart(canvas.getContext('2d'), {
     type: 'line',
     data: {
-      labels: slice.map((_, k) => k),
+      labels: dateLabels || slice.map((_, k) => k),
       datasets: [{
         data: slice,
         borderColor: color,
@@ -795,7 +835,10 @@ function drawModalChart() {
         legend: { display: false },
         tooltip: {
           mode: 'index', intersect: false,
-          callbacks: { label: c => ' ' + c.parsed.y.toFixed(2), title: () => '' },
+          callbacks: {
+            label: c => ' ' + c.parsed.y.toFixed(2),
+            title: tips => dateLabels ? [tips[0].label] : []
+          },
           backgroundColor: '#1e2d40', bodyColor: '#e2e8f0', borderColor: '#1e2d40', borderWidth: 1
         }
       },
@@ -844,11 +887,14 @@ async function fetchTickerDaily(ticker) {
     if (!res) return null;
     const closes = res.indicators?.quote?.[0]?.close ?? [];
     const ts = res.timestamp ?? [];
-    const pts = [];
+    const pts = [], dates = [];
     for (let k = 0; k < ts.length; k++) {
-      if (closes[k] != null) pts.push(closes[k]);
+      if (closes[k] != null) {
+        pts.push(closes[k]);
+        dates.push(new Date(ts[k] * 1000).toISOString().slice(0, 10));
+      }
     }
-    return pts.length >= 5 ? pts : null;
+    return pts.length >= 5 ? { pts, dates } : null;
   } catch { return null; }
 }
 
@@ -908,8 +954,8 @@ async function loadHolding(i) {
   for (let j = 0; j < N; j++) {
     const c = priceCache[j];
     if (!c) continue;
-    const s = c.pts.slice(-activeListWeeks);
-    if (s.length < 2) continue;
+    const s = getListSlice(j);
+    if (!s || s.length < 2) continue;
     const r = (s[s.length-1] - s[0]) / s[0] * 100;
     wSum += r * HOLDINGS[j].weight;
     wTotal += HOLDINGS[j].weight;
