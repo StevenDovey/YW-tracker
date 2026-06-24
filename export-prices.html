@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Export Unit Prices</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0a0e17; color: #e2e8f0; font-family: 'IBM Plex Mono', monospace; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+  .card { background: #111827; border: 1px solid #1e2d40; border-radius: 12px; padding: 32px; width: 480px; }
+  h2 { font-size: 16px; color: #00d4aa; margin-bottom: 4px; }
+  .sub { font-size: 11px; color: #64748b; margin-bottom: 24px; }
+  .row { display: flex; gap: 12px; margin-bottom: 16px; }
+  label { font-size: 10px; color: #64748b; letter-spacing: 0.08em; text-transform: uppercase; display: block; margin-bottom: 4px; }
+  input[type=date] { background: #0a0e17; border: 1px solid #1e2d40; border-radius: 6px; color: #e2e8f0; font-family: inherit; font-size: 12px; padding: 8px 10px; width: 100%; }
+  .btn { width: 100%; padding: 12px; border-radius: 8px; border: none; background: #00d4aa; color: #0a0e17; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; margin-top: 8px; }
+  .btn:disabled { background: #1e2d40; color: #64748b; cursor: not-allowed; }
+  .progress { margin-top: 20px; display: none; }
+  .prog-bar { background: #1e2d40; border-radius: 4px; height: 4px; overflow: hidden; margin-bottom: 10px; }
+  .prog-fill { background: #00d4aa; height: 100%; width: 0; transition: width 0.2s; }
+  .log { font-size: 10px; color: #64748b; max-height: 160px; overflow-y: auto; }
+  .log div { padding: 1px 0; }
+  .log .ok { color: #00d4aa; }
+  .log .skip { color: #64748b; }
+  .log .err { color: #ff4757; }
+  .dl-btn { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #00d4aa; background: transparent; color: #00d4aa; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; margin-top: 12px; display: none; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h2>YouWealth High Growth Fund</h2>
+  <div class="sub">Export unit prices to CSV</div>
+  <div class="row">
+    <div style="flex:1">
+      <label>From</label>
+      <input type="date" id="from" value="2026-05-01">
+    </div>
+    <div style="flex:1">
+      <label>To</label>
+      <input type="date" id="to">
+    </div>
+  </div>
+  <button class="btn" id="fetch-btn" onclick="run()">Fetch prices</button>
+  <div class="progress" id="progress">
+    <div class="prog-bar"><div class="prog-fill" id="prog-fill"></div></div>
+    <div class="log" id="log"></div>
+  </div>
+  <button class="dl-btn" id="dl-btn" onclick="download()">Download CSV</button>
+</div>
+
+<script>
+const API_KEY  = 'vjqaLG3y07VHpZnIe8nYX808FGPYid8G';
+const FUND_CODE = 'BNZ2112012';
+const BASE_URL  = 'https://api.bnz.co.nz/v1/fundunitprices';
+
+// Set default "to" to today
+document.getElementById('to').value = new Date().toISOString().slice(0, 10);
+
+function fmtDate(d) {
+  return d.toISOString().slice(0, 10);
+}
+
+function isWeekend(d) {
+  return d.getDay() === 0 || d.getDay() === 6;
+}
+
+function businessDays(from, to) {
+  const days = [];
+  const d = new Date(from);
+  const end = new Date(to);
+  while (d <= end) {
+    if (!isWeekend(d)) days.push(fmtDate(d));
+    d.setDate(d.getDate() + 1);
+  }
+  return days;
+}
+
+function log(msg, cls) {
+  const el = document.getElementById('log');
+  const div = document.createElement('div');
+  div.className = cls || '';
+  div.textContent = msg;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+}
+
+let results = [];
+
+async function run() {
+  results = [];
+  const from = document.getElementById('from').value;
+  const to   = document.getElementById('to').value;
+  if (!from || !to || from > to) { alert('Check date range'); return; }
+
+  const days = businessDays(from, to);
+  document.getElementById('log').innerHTML = '';
+  document.getElementById('progress').style.display = 'block';
+  document.getElementById('dl-btn').style.display = 'none';
+  document.getElementById('fetch-btn').disabled = true;
+
+  for (let i = 0; i < days.length; i++) {
+    const date = days[i];
+    document.getElementById('prog-fill').style.width = ((i + 1) / days.length * 100) + '%';
+    try {
+      const res = await fetch(`${BASE_URL}?date=${date}&fundProduct=retailManagedFund`, {
+        headers: { ApiKey: API_KEY }
+      });
+      if (!res.ok) { log(`${date}  HTTP ${res.status}`, 'err'); continue; }
+      const json = await res.json();
+      const entry = (json.fundUnitPrices || []).find(f => f.fundCode === FUND_CODE);
+      if (entry) {
+        const price = parseFloat(entry.sellPrice.amount);
+        results.push({ date, price });
+        log(`${date}  ${price.toFixed(4)}`, 'ok');
+      } else {
+        log(`${date}  no data (holiday?)`, 'skip');
+      }
+    } catch (e) {
+      log(`${date}  error: ${e.message}`, 'err');
+    }
+    // Small delay to avoid hammering the API
+    await new Promise(r => setTimeout(r, 50));
+  }
+
+  document.getElementById('fetch-btn').disabled = false;
+  if (results.length > 0) {
+    document.getElementById('dl-btn').style.display = 'block';
+    log(`Done — ${results.length} prices fetched`, 'ok');
+  }
+}
+
+function download() {
+  const rows = ['Date,Unit Price', ...results.map(r => `${r.date},${r.price.toFixed(4)}`)];
+  const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'youwealth-high-growth-prices.csv';
+  a.click();
+}
+</script>
+</body>
+</html>
