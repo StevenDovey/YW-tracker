@@ -109,9 +109,10 @@ async function run() {
       const json = await res.json();
       const entry = (json.fundUnitPrices || []).find(f => f.fundCode === FUND_CODE);
       if (entry) {
-        const price = parseFloat(entry.sellPrice.amount);
-        results.push({ date, price });
-        log(`${date}  ${price.toFixed(4)}`, 'ok');
+        const buy  = parseFloat(entry.buyPrice.amount);
+        const sell = parseFloat(entry.sellPrice.amount);
+        results.push({ date, buy, sell });
+        log(`${date}  buy ${buy.toFixed(4)}  sell ${sell.toFixed(4)}`, 'ok');
       } else {
         log(`${date}  no data (holiday?)`, 'skip');
       }
@@ -130,7 +131,7 @@ async function run() {
 }
 
 function download() {
-  const rows = ['Date,Unit Price', ...results.map(r => `${r.date},${r.price.toFixed(4)}`)];
+  const rows = ['Date,Buy Price,Sell Price', ...results.map(r => `${r.date},${r.buy.toFixed(4)},${r.sell.toFixed(4)}`)];
   const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
