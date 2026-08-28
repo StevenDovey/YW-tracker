@@ -4,7 +4,6 @@ Runs server-side (GitHub Actions) so the page never needs to call BNZ's API
 from the visitor's browser or cache anything in localStorage.
 """
 import json
-import os
 import urllib.error
 import urllib.request
 from datetime import datetime, timedelta, timezone
@@ -13,7 +12,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 DATA_FILE = ROOT / "data" / "fund-prices.json"
 
-API_KEY = os.environ["BNZ_API_KEY"]
+API_KEY = "vjqaLG3y07VHpZnIe8nYX808FGPYid8G"
 FUND_CODES = {
     "High Growth Fund": "BNZ2112012",
     "Growth Fund": "BNZ2112008",
