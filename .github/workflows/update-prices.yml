@@ -18,8 +18,6 @@ jobs:
           python-version: '3.12'
       - run: python scripts/fetch_prices.py
       - run: python scripts/fetch_fund_prices.py
-        env:
-          BNZ_API_KEY: ${{ secrets.BNZ_API_KEY }}
       - run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
