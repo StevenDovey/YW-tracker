@@ -84,21 +84,6 @@
     }
 
 
-    .progress-wrap {
-      height: 2px;
-      background: var(--border);
-      border-radius: 1px;
-      overflow: hidden;
-      margin-bottom: 16px;
-    }
-    .progress-fill {
-      height: 100%;
-      background: var(--accent);
-      border-radius: 1px;
-      transition: width 0.25s;
-      width: 0%;
-    }
-
     .table-wrap {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -377,23 +362,19 @@
     <div class="subtitle">Portfolio as at 30 Sep 2025 · NZ Disclose Register FND46936</div>
   </div>
   <div class="status-bar">
-    <span class="accent" id="loaded-count">0</span> / <span id="total-count">—</span>
+    prices updated <span class="accent" id="updated-date">—</span>
   </div>
 </header>
 
 <div class="container">
 
-<div class="progress-wrap">
-    <div class="progress-fill" id="progress-fill"></div>
-  </div>
-
   <div class="range-bar">
-    <button class="list-range-btn" data-weeks="2" data-days="5">1W</button>
-    <button class="list-range-btn" data-weeks="4" data-days="21">1M</button>
-    <button class="list-range-btn" data-weeks="13">3M</button>
-    <button class="list-range-btn" data-weeks="26">6M</button>
-    <button class="list-range-btn active" data-weeks="52">1Y</button>
-    <button class="list-range-btn" data-weeks="104">2Y</button>
+    <button class="list-range-btn" data-days="5">1W</button>
+    <button class="list-range-btn" data-days="21">1M</button>
+    <button class="list-range-btn" data-days="63">3M</button>
+    <button class="list-range-btn" data-days="126">6M</button>
+    <button class="list-range-btn active" data-days="252">1Y</button>
+    <button class="list-range-btn" data-days="504">2Y</button>
     <div class="weighted-return">
       <span class="wr-label" id="wr-label">Weighted</span>
       <span class="wr-val" id="wr-val">—</span>
@@ -444,131 +425,16 @@
 </div>
 
 <script>
-const HOLDINGS = [
-  { name: "Fisher & Paykel Healthcare", ticker: "FPH.NZ",  weight: 5.06 },
-  { name: "NVIDIA Corp",                ticker: "NVDA",     weight: 3.40 },
-  { name: "Infratil Ltd",               ticker: "IFT.NZ",  weight: 3.17 },
-  { name: "Microsoft Corporation",      ticker: "MSFT",     weight: 2.99 },
-  { name: "Apple Inc",                  ticker: "AAPL",     weight: 2.92 },
-  { name: "Auckland Intl Airport",      ticker: "AIA.NZ",  weight: 2.80 },
-  { name: "Contact Energy Ltd",         ticker: "CEN.NZ",  weight: 1.99 },
-  { name: "Mainfreight Ltd",            ticker: "MFT.NZ",  weight: 1.79 },
-  { name: "EBOS Group Ltd",             ticker: "EBO.NZ",  weight: 1.74 },
-  { name: "Amazon.com Inc",             ticker: "AMZN",     weight: 1.64 },
-  { name: "A2 Milk Company",            ticker: "ATM.NZ",  weight: 1.61 },
-  { name: "Meridian Energy Ltd",        ticker: "MEL.NZ",  weight: 1.42 },
-  { name: "Meta Platforms Inc",         ticker: "META",     weight: 1.25 },
-  { name: "Broadcom Inc",               ticker: "AVGO",     weight: 1.19 },
-  { name: "Alphabet Inc Cl A",          ticker: "GOOGL",    weight: 1.10 },
-  { name: "Summerset Group Holdings",   ticker: "SUM.NZ",  weight: 1.00 },
-  { name: "Mercury NZ Ltd",             ticker: "MCY.NZ",  weight: 0.98 },
-  { name: "Tesla Inc",                  ticker: "TSLA",     weight: 0.97 },
-  { name: "Alphabet Inc Cl C",          ticker: "GOOG",     weight: 0.90 },
-  { name: "Ryman Healthcare Ltd",       ticker: "RYM.NZ",  weight: 0.82 },
-  { name: "Taiwan Semiconductor",       ticker: "TSM",      weight: 0.81 },
-  { name: "Freightways Ltd",            ticker: "FRE.NZ",  weight: 0.74 },
-  { name: "Precinct Properties NZ",     ticker: "PCT.NZ",  weight: 0.73 },
-  { name: "Fletcher Building Ltd",      ticker: "FBU.NZ",  weight: 0.71 },
-  { name: "Spark New Zealand Ltd",      ticker: "SPK.NZ",  weight: 0.69 },
-  { name: "JPMorgan Chase & Co",        ticker: "JPM",      weight: 0.68 },
-  { name: "Berkshire Hathaway B",       ticker: "BRK-B",   weight: 0.53 },
-  { name: "Eli Lilly and Company",      ticker: "LLY",      weight: 0.48 },
-  { name: "Chorus Ltd",                 ticker: "CNU.NZ",  weight: 0.47 },
-  { name: "Visa Inc",                   ticker: "V",        weight: 0.45 },
-  { name: "Scales Corporation",         ticker: "SCL.NZ",  weight: 0.43 },
-  { name: "Tencent Holdings",           ticker: "TCEHY",   weight: 0.42 },
-  { name: "Netflix Inc",                ticker: "NFLX",     weight: 0.40 },
-  { name: "Goodman Property Trust",     ticker: "GMT.NZ",  weight: 0.39 },
-  { name: "Kiwi Property Group",        ticker: "KPG.NZ",  weight: 0.38 },
-  { name: "Mastercard Inc",             ticker: "MA",       weight: 0.36 },
-  { name: "Oracle Corp",                ticker: "ORCL",     weight: 0.36 },
-  { name: "Walmart Inc",                ticker: "WMT",      weight: 0.35 },
-  { name: "Johnson & Johnson",          ticker: "JNJ",      weight: 0.35 },
-  { name: "Alibaba Group",              ticker: "BABA",     weight: 0.32 },
-  { name: "AbbVie Inc",                 ticker: "ABBV",     weight: 0.32 },
-  { name: "Costco Wholesale Corp",      ticker: "COST",     weight: 0.32 },
-  { name: "Palantir Technologies",      ticker: "PLTR",     weight: 0.31 },
-  { name: "Home Depot Inc",             ticker: "HD",       weight: 0.31 },
-  { name: "ASML Holding NV",            ticker: "ASML",     weight: 0.30 },
-  { name: "Port of Tauranga",           ticker: "POT.NZ",  weight: 0.28 },
-  { name: "Procter & Gamble",           ticker: "PG",       weight: 0.28 },
-  { name: "Xero Ltd",                   ticker: "XRO.AX",  weight: 0.28 },
-  { name: "Challenger Financial",       ticker: "CGF.AX",  weight: 0.28 },
-  { name: "Bank of America Corp",       ticker: "BAC",      weight: 0.27 },
-  { name: "CSL Ltd",                    ticker: "CSL.AX",  weight: 0.27 },
-  { name: "Vital Healthcare Property",  ticker: "VHP.NZ",  weight: 0.26 },
-  { name: "General Electric Co",        ticker: "GE",       weight: 0.25 },
-  { name: "UnitedHealth Group",         ticker: "UNH",      weight: 0.24 },
-  { name: "Channel Infrastructure NZ",  ticker: "CHI.NZ",  weight: 0.23 },
-  { name: "SAP SE",                     ticker: "SAP",      weight: 0.22 },
-  { name: "Cisco Systems Inc",          ticker: "CSCO",     weight: 0.21 },
-  { name: "Wells Fargo & Co",           ticker: "WFC",      weight: 0.21 },
-  { name: "Advanced Micro Devices",     ticker: "AMD",      weight: 0.20 },
-  { name: "Rio Tinto Ltd",              ticker: "RIO.AX",  weight: 0.20 },
-  { name: "Coca-Cola Co",               ticker: "KO",       weight: 0.20 },
-  { name: "IBM Corp",                   ticker: "IBM",      weight: 0.20 },
-  { name: "Serko Ltd",                  ticker: "SKO.NZ",  weight: 0.20 },
-  { name: "HSBC Holdings",              ticker: "HSBC",     weight: 0.19 },
-  { name: "Goldman Sachs Group",        ticker: "GS",       weight: 0.19 },
-  { name: "Nestlé SA",                  ticker: "NSRGY",   weight: 0.18 },
-  { name: "AstraZeneca PLC",            ticker: "AZN",      weight: 0.18 },
-  { name: "Life360 Inc",                ticker: "360.AX",  weight: 0.18 },
-  { name: "Roche Holding AG",           ticker: "RHHBY",   weight: 0.18 },
-  { name: "Abbott Laboratories",        ticker: "ABT",      weight: 0.18 },
-  { name: "Vista Group International",  ticker: "VGL.NZ",  weight: 0.18 },
-  { name: "Gentrack Group Ltd",         ticker: "GTK.NZ",  weight: 0.18 },
-  { name: "Novartis AG",                ticker: "NVS",      weight: 0.18 },
-  { name: "Berkshire Hathaway A",       ticker: "BRK-A",   weight: 0.18 },
-  { name: "Stride Stapled Group",       ticker: "SPG.NZ",  weight: 0.18 },
-  { name: "McDonald's Corp",            ticker: "MCD",      weight: 0.17 },
-  { name: "Argosy Property Trust",      ticker: "ARG.NZ",  weight: 0.17 },
-  { name: "Linde PLC",                  ticker: "LIN",      weight: 0.17 },
-  { name: "Property for Industry",      ticker: "PFI.NZ",  weight: 0.17 },
-  { name: "Salesforce Inc",             ticker: "CRM",      weight: 0.17 },
-  { name: "Vector Ltd",                 ticker: "VCT.NZ",  weight: 0.16 },
-  { name: "Walt Disney Co",             ticker: "DIS",      weight: 0.16 },
-  { name: "Royal Bank of Canada",       ticker: "RY",       weight: 0.16 },
-  { name: "Merck & Co Inc",             ticker: "MRK",      weight: 0.16 },
-  { name: "Toyota Motor Corp",          ticker: "TM",       weight: 0.16 },
-  { name: "Goodman Group",              ticker: "GMG.AX",  weight: 0.15 },
-  { name: "AT&T Inc",                   ticker: "T",        weight: 0.15 },
-  { name: "Citigroup Inc",              ticker: "C",        weight: 0.15 },
-  { name: "Intuit Inc",                 ticker: "INTU",     weight: 0.15 },
-  { name: "Micron Technology",          ticker: "MU",       weight: 0.15 },
-  { name: "Sky Network Television",     ticker: "SKT.NZ",  weight: 0.15 },
-  { name: "ServiceNow Inc",             ticker: "NOW",      weight: 0.15 },
-  { name: "PepsiCo Inc",               ticker: "PEP",      weight: 0.15 },
-  { name: "Commonwealth Bank of Aus",   ticker: "CBA.AX",  weight: 0.15 },
-  { name: "Uber Technologies",          ticker: "UBER",     weight: 0.15 },
-  { name: "Napier Port Holdings",       ticker: "NPH.NZ",  weight: 0.15 },
-  { name: "Morgan Stanley",             ticker: "MS",       weight: 0.14 },
-  { name: "Lam Research Corp",          ticker: "LRCX",     weight: 0.14 },
-  { name: "Telix Pharmaceuticals",      ticker: "TLX.AX",  weight: 0.14 },
-  { name: "Sony Corp",                  ticker: "SONY",     weight: 0.14 },
-  { name: "BlackRock Inc",              ticker: "BLK",      weight: 0.14 },
-  { name: "AppLovin Corp",              ticker: "APP",      weight: 0.14 },
-  { name: "American Express Co",        ticker: "AXP",      weight: 0.14 },
-  { name: "Thermo Fisher Scientific",   ticker: "TMO",      weight: 0.14 },
-  { name: "QUALCOMM Inc",               ticker: "QCOM",     weight: 0.14 },
-  { name: "Verizon Communications",     ticker: "VZ",       weight: 0.14 },
-  { name: "Shopify Inc",                ticker: "SHOP",     weight: 0.14 },
-  { name: "Texas Instruments Inc",      ticker: "TXN",      weight: 0.13 },
-  { name: "Novo Nordisk A/S",           ticker: "NVO",      weight: 0.13 },
-  { name: "Skellerup Holdings",         ticker: "SKL.NZ",  weight: 0.13 },
-  { name: "Allianz SE",                 ticker: "ALIZY",   weight: 0.13 },
-  { name: "TJX Companies Inc",          ticker: "TJX",      weight: 0.13 },
-  { name: "Booking Holdings Inc",       ticker: "BKNG",     weight: 0.13 },
-  { name: "Applied Materials Inc",      ticker: "AMAT",     weight: 0.13 },
-  { name: "GE Vernova Inc",             ticker: "GEV",      weight: 0.13 },
-  { name: "Charles Schwab Corp",        ticker: "SCHW",     weight: 0.13 },
-];
-
-const MAX_WEIGHT = HOLDINGS[0].weight;
-const TOTAL_WEIGHT = HOLDINGS.reduce((s, h) => s + h.weight, 0);
-let loadedCount = 0;
-const N = HOLDINGS.length;
-
-document.getElementById('total-count').textContent = N;
+let HOLDINGS = [];
+let N = 0;
+let MAX_WEIGHT = 0;
+const priceCache = {}; // ticker index -> { dates, closes }
+const chartInstances = {};
+let activeListDays = 252;
+let modalActiveDays = 252;
+let modalIdx = -1;
+let modalChart = null;
+let indexChart = null;
 
 function buildRows() {
   const frag = document.createDocumentFragment();
@@ -585,73 +451,46 @@ function buildRows() {
       `</div>` +
       `<div class="weight-pct">${h.weight.toFixed(2)}%</div>` +
       `<div class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:${barW}%"></div></div></div>` +
-      `<div class="ret-cell pending" id="ret${i}">…</div>` +
+      `<div class="ret-cell na" id="ret${i}">n/a</div>` +
       `<div class="chart-cell" id="cc${i}"><canvas id="cv${i}" height="44"></canvas><div class="date-label" id="dt${i}"></div></div>`;
     frag.appendChild(row);
   });
   document.getElementById('holdings-list').appendChild(frag);
 }
 
-buildRows();
-
-const YAHOO_BASE = 'https://query1.finance.yahoo.com/v8/finance/chart/';
-const PROXY = 'https://corsproxy.io/?';
-const chartInstances = {};
-
-const priceCache = {};  // index -> { pts, lastDate }
-let activeListWeeks = 52;
-let activeListDays = 0; // set for 1W/1M; 0 means use weekly data
-
-let redrawTimer = null;
-function scheduleRedraw() {
-  clearTimeout(redrawTimer);
-  redrawTimer = setTimeout(redrawAll, 60);
-}
-
 document.querySelectorAll('.list-range-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.list-range-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    activeListWeeks = parseInt(btn.dataset.weeks);
-    activeListDays = btn.dataset.days ? parseInt(btn.dataset.days) : 0;
+    activeListDays = parseInt(btn.dataset.days);
     redrawAll();
-    if (activeListDays) triggerDailyFetches();
   });
 });
 
-function triggerDailyFetches() {
-  HOLDINGS.forEach((h, i) => {
-    if (!modalDailyCache[i]) {
-      fetchTickerDaily(h.ticker).then(result => {
-        if (result) {
-          modalDailyCache[i] = result;
-          if (activeListDays) scheduleRedraw();
-        }
-      });
-    }
-  });
-}
-
-function getListSlice(i) {
-  if (activeListDays && modalDailyCache[i]?.pts) {
-    return modalDailyCache[i].pts.slice(-activeListDays);
-  }
-  return priceCache[i]?.pts.slice(-activeListWeeks) ?? null;
+function getSlice(i, days) {
+  const c = priceCache[i];
+  if (!c) return null;
+  return { dates: c.dates.slice(-days), closes: c.closes.slice(-days) };
 }
 
 function redrawAll() {
   let wSum = 0, wTotal = 0;
   for (let i = 0; i < N; i++) {
-    const cache = priceCache[i];
-    if (!cache) continue;
-    const sliced = getListSlice(i);
-    if (!sliced || sliced.length < 2) continue;
-    const ret = (sliced[sliced.length-1] - sliced[0]) / sliced[0] * 100;
-    const isUp = ret >= 0;
+    const s = getSlice(i, activeListDays);
     const retEl = document.getElementById('ret' + i);
+    if (!s || s.closes.length < 2) {
+      retEl.textContent = 'n/a';
+      retEl.className = 'ret-cell na';
+      continue;
+    }
+    const closes = s.closes;
+    const ret = (closes[closes.length - 1] - closes[0]) / closes[0] * 100;
+    const isUp = ret >= 0;
     retEl.textContent = (isUp ? '+' : '') + ret.toFixed(1) + '%';
     retEl.className = 'ret-cell ' + (isUp ? 'up' : 'down');
-    drawSparkline(i, sliced, isUp);
+    drawSparkline(i, closes, isUp);
+    const dtEl = document.getElementById('dt' + i);
+    if (dtEl) dtEl.textContent = s.dates[s.dates.length - 1];
     wSum += ret * HOLDINGS[i].weight;
     wTotal += HOLDINGS[i].weight;
   }
@@ -667,26 +506,21 @@ function updateWeightedReturn(wSum, wTotal) {
   buildWeightedChart();
 }
 
-let indexChart = null;
 function buildWeightedChart() {
-  // Build normalised weighted index series
-  // For each loaded holding, get slice, normalise to start=1, weight it
   const series = [];
   let minLen = Infinity;
   for (let i = 0; i < N; i++) {
-    if (!priceCache[i]) continue;
-    const s = getListSlice(i);
-    if (!s || s.length < 2 || s[0] === 0) continue;
-    series.push({ norm: s.map(v => v / s[0]), weight: HOLDINGS[i].weight });
-    if (s.length < minLen) minLen = s.length;
+    const s = getSlice(i, activeListDays);
+    if (!s || s.closes.length < 2 || s.closes[0] === 0) continue;
+    series.push({ norm: s.closes.map(v => v / s.closes[0]), weight: HOLDINGS[i].weight });
+    if (s.closes.length < minLen) minLen = s.closes.length;
   }
   if (series.length === 0 || minLen < 2) return;
 
-  // Weighted average at each time step
   const totalW = series.reduce((a, s) => a + s.weight, 0);
   const indexPts = Array.from({ length: minLen }, (_, t) => {
     const val = series.reduce((a, s) => a + s.norm[s.norm.length - minLen + t] * s.weight, 0) / totalW;
-    return (val - 1) * 100; // as % return from start
+    return (val - 1) * 100;
   });
 
   const rising = indexPts[indexPts.length - 1] >= 0;
@@ -742,10 +576,6 @@ function buildWeightedChart() {
     });
   }
 }
-let modalChart = null;
-let modalActiveDays = 252;
-let modalIdx = -1;
-const modalDailyCache = {};
 
 document.querySelectorAll('.modal-range-btn').forEach(btn => {
   btn.addEventListener('click', e => {
@@ -776,14 +606,6 @@ function openDetail(i) {
   modalActiveDays = 252;
   document.querySelectorAll('.modal-range-btn').forEach(b => b.classList.toggle('active', b.dataset.days === '252'));
   drawModalChart();
-  if (!modalDailyCache[i]) {
-    fetchTickerDaily(h.ticker).then(pts => {
-      if (pts) {
-        modalDailyCache[i] = pts;
-        if (modalIdx === i) drawModalChart();
-      }
-    });
-  }
 }
 
 function closeModal(e) {
@@ -795,28 +617,21 @@ function closeModalDirect() {
 }
 
 function drawModalChart() {
-  const daily = modalDailyCache[modalIdx];
-  const weekly = priceCache[modalIdx]?.pts;
-  let slice, dateLabels;
-  if (daily) {
-    slice = daily.pts.slice(-modalActiveDays);
-    dateLabels = daily.dates.slice(-modalActiveDays);
-  } else if (weekly) {
-    const weekCount = Math.max(2, Math.round(modalActiveDays / 5));
-    slice = weekly.slice(-weekCount);
-    dateLabels = null;
-  } else {
+  const s = getSlice(modalIdx, modalActiveDays);
+  if (!s || s.closes.length < 2) {
     if (modalChart) { modalChart.destroy(); modalChart = null; }
     return;
   }
-  const isUp = slice[slice.length-1] >= slice[0];
+  const slice = s.closes;
+  const dateLabels = s.dates;
+  const isUp = slice[slice.length - 1] >= slice[0];
   const color = isUp ? '#00d4aa' : '#ff4757';
   const canvas = document.getElementById('modal-canvas');
   if (modalChart) { modalChart.destroy(); modalChart = null; }
   modalChart = new Chart(canvas.getContext('2d'), {
     type: 'line',
     data: {
-      labels: dateLabels || slice.map((_, k) => k),
+      labels: dateLabels,
       datasets: [{
         data: slice,
         borderColor: color,
@@ -837,7 +652,7 @@ function drawModalChart() {
           mode: 'index', intersect: false,
           callbacks: {
             label: c => ' ' + c.parsed.y.toFixed(2),
-            title: tips => dateLabels ? [tips[0].label] : []
+            title: tips => [tips[0].label]
           },
           backgroundColor: '#1e2d40', bodyColor: '#e2e8f0', borderColor: '#1e2d40', borderWidth: 1
         }
@@ -848,54 +663,6 @@ function drawModalChart() {
       }
     }
   });
-}
-
-
-async function fetchTicker(ticker) {
-  const yf = `${YAHOO_BASE}${encodeURIComponent(ticker)}?range=2y&interval=1wk`;
-  const url = PROXY + encodeURIComponent(yf);
-  try {
-    const r = await fetch(url);
-    if (!r.ok) return null;
-    const j = await r.json();
-    const res = j.chart?.result?.[0];
-    if (!res) return null;
-    const closes = res.indicators?.quote?.[0]?.close ?? [];
-    const ts = res.timestamp ?? [];
-    const pts = [], dates = [];
-    for (let k = 0; k < ts.length; k++) {
-      if (closes[k] != null) {
-        pts.push(closes[k]);
-        dates.push(new Date(ts[k] * 1000).toISOString().slice(0,10));
-      }
-    }
-    if (pts.length < 2) return null;
-    return { pts, lastDate: dates[dates.length - 1] };
-  } catch {
-    return null;
-  }
-}
-
-async function fetchTickerDaily(ticker) {
-  const yf = `${YAHOO_BASE}${encodeURIComponent(ticker)}?range=2y&interval=1d`;
-  const url = PROXY + encodeURIComponent(yf);
-  try {
-    const r = await fetch(url);
-    if (!r.ok) return null;
-    const j = await r.json();
-    const res = j.chart?.result?.[0];
-    if (!res) return null;
-    const closes = res.indicators?.quote?.[0]?.close ?? [];
-    const ts = res.timestamp ?? [];
-    const pts = [], dates = [];
-    for (let k = 0; k < ts.length; k++) {
-      if (closes[k] != null) {
-        pts.push(closes[k]);
-        dates.push(new Date(ts[k] * 1000).toISOString().slice(0, 10));
-      }
-    }
-    return pts.length >= 5 ? { pts, dates } : null;
-  } catch { return null; }
 }
 
 function drawSparkline(id, pts, isUp) {
@@ -928,53 +695,34 @@ function drawSparkline(id, pts, isUp) {
   });
 }
 
-async function loadHolding(i) {
-  const result = await fetchTicker(HOLDINGS[i].ticker);
-  loadedCount++;
-  document.getElementById('loaded-count').textContent = loadedCount;
-  document.getElementById('progress-fill').style.width = (loadedCount / N * 100) + '%';
-
-  const retEl = document.getElementById('ret' + i);
-  if (!result) {
-    retEl.textContent = 'n/a';
-    retEl.className = 'ret-cell na';
+async function init() {
+  let holdingsData, pricesData;
+  try {
+    [holdingsData, pricesData] = await Promise.all([
+      fetch('data/holdings.json').then(r => r.json()),
+      fetch('data/prices.json').then(r => r.json()),
+    ]);
+  } catch (err) {
+    document.getElementById('holdings-list').innerHTML =
+      '<div style="padding:24px;color:var(--muted);font-family:\'IBM Plex Mono\',monospace;font-size:12px;">Failed to load holdings data.</div>';
     return;
   }
-  priceCache[i] = result;
-  const sliced = result.pts.slice(-activeListWeeks);
-  const ret = (sliced[sliced.length-1] - sliced[0]) / sliced[0] * 100;
-  const isUp = ret >= 0;
-  retEl.textContent = (isUp ? '+' : '') + ret.toFixed(1) + '%';
-  retEl.className = 'ret-cell ' + (isUp ? 'up' : 'down');
-  drawSparkline(i, sliced, isUp);
-  const dtEl = document.getElementById('dt' + i);
-  if (dtEl) dtEl.textContent = result.lastDate;
-  // update weighted return live as data arrives
-  let wSum = 0, wTotal = 0;
-  for (let j = 0; j < N; j++) {
-    const c = priceCache[j];
-    if (!c) continue;
-    const s = getListSlice(j);
-    if (!s || s.length < 2) continue;
-    const r = (s[s.length-1] - s[0]) / s[0] * 100;
-    wSum += r * HOLDINGS[j].weight;
-    wTotal += HOLDINGS[j].weight;
-  }
-  updateWeightedReturn(wSum, wTotal);
+
+  HOLDINGS = holdingsData;
+  N = HOLDINGS.length;
+  MAX_WEIGHT = HOLDINGS[0].weight;
+  document.getElementById('updated-date').textContent = pricesData.generated_at ? pricesData.generated_at.slice(0, 10) : '—';
+
+  HOLDINGS.forEach((h, i) => {
+    const series = pricesData.prices[h.ticker];
+    if (series) priceCache[i] = series;
+  });
+
+  buildRows();
+  redrawAll();
 }
 
-async function loadAll() {
-  const BATCH = 8;
-  for (let i = 0; i < N; i += BATCH) {
-    const end = Math.min(i + BATCH, N);
-    const batch = [];
-    for (let j = i; j < end; j++) batch.push(loadHolding(j));
-    await Promise.all(batch);
-    if (end < N) await new Promise(r => setTimeout(r, 250));
-  }
-}
-
-loadAll();
+init();
 </script>
 </body>
 </html>
